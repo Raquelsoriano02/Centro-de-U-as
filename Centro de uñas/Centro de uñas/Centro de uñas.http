@@ -1,6 +1,11 @@
 @Centro_de_uñas_HostAddress = http://localhost:5228
 
-GET {{Centro_de_uñas_HostAddress}}/weatherforecast/
+GET {{Centro_de_uñas_HostAddress}}/api/Cliente
+Accept: application/json
+
+###
+
+GET {{Centro_de_uñas_HostAddress}}/api/Turno
 Accept: application/json
 
 ###
