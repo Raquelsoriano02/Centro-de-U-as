@@ -1,0 +1,6 @@
+@Centro_de_uñas_HostAddress = http://localhost:5228
+
+GET {{Centro_de_uñas_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
