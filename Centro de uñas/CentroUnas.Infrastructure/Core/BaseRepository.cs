@@ -1,11 +1,10 @@
 using CentroUnas.Domain.Core;
-using CentroUnas.Domain.Repository;
 using CentroUnas.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace CentroUnas.Infrastructure.Core
 {
-    public class BaseRepository<T> : IBaseRepository<T> where T : BaseEntity
+    public class BaseRepository<T> where T : BaseEntity
     {
         protected readonly CentroUnasContext _context;
 

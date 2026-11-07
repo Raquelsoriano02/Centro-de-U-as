@@ -1,6 +1,6 @@
+using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
+using CentroUnas.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,9 +9,9 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class PagoController : ControllerBase
     {
-        private readonly IPagoRepository _repository;
+        private readonly PagoRepository _repository;
 
-        public PagoController(IPagoRepository repository)
+        public PagoController(PagoRepository repository)
         {
             _repository = repository;
         }
@@ -19,14 +19,14 @@ namespace Centro_de_uñas.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllPagos()
         {
-            var pagos = await _repository.GetAllPagosAsync();
+            var pagos = await _repository.GetAll();
             return Ok(pagos);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPagoById(int id)
         {
-            var pago = await _repository.GetPagoByIdAsync(id);
+            var pago = await _repository.GetById(id);
             if (pago == null)
             {
                 return NotFound($"Pago con id {id} no encontrado");
@@ -36,12 +36,12 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreatePago([FromBody] PagoModel model)
+        public async Task<IActionResult> CreatePago([FromBody] Pago datos)
         {
             try
             {
-                var pago = await _repository.CreatePagoAsync(model);
-                return CreatedAtAction(nameof(GetPagoById), new { id = pago.PagoId }, pago);
+                var pago = await _repository.CreatePagoAsync(datos);
+                return CreatedAtAction(nameof(GetPagoById), new { id = pago.Id }, pago);
             }
             catch (PagoException ex)
             {
@@ -50,11 +50,11 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePago(int id, [FromBody] PagoModel model)
+        public async Task<IActionResult> UpdatePago(int id, [FromBody] Pago datos)
         {
             try
             {
-                var actualizado = await _repository.UpdatePagoAsync(id, model);
+                var actualizado = await _repository.UpdatePagoAsync(id, datos);
                 if (!actualizado)
                 {
                     return NotFound($"Pago con id {id} no encontrado");

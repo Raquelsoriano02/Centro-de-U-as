@@ -2,54 +2,33 @@ using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Context;
 using CentroUnas.Infrastructure.Core;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace CentroUnas.Infrastructure.Repositories
 {
-    public class HorarioRepository : BaseRepository<Horario>, IHorarioRepository
+    public class HorarioRepository : BaseRepository<Horario>
     {
         public HorarioRepository(CentroUnasContext context) : base(context)
         {
         }
 
-        public async Task<List<HorarioModel>> GetAllHorariosAsync()
+        public async Task<Horario> CreateHorarioAsync(Horario datos)
         {
-            var horarios = await _context.Horarios
-                .Include(h => h.Tecnica)
-                .ToListAsync();
-
-            return horarios.Select(ToModel).ToList();
-        }
-
-        public async Task<HorarioModel?> GetHorarioByIdAsync(int id)
-        {
-            var horario = await _context.Horarios
-                .Include(h => h.Tecnica)
-                .FirstOrDefaultAsync(h => h.Id == id);
-
-            return horario == null ? null : ToModel(horario);
-        }
-
-        public async Task<HorarioModel> CreateHorarioAsync(HorarioModel model)
-        {
-            await ValidarHorarioAsync(model, 0);
+            await ValidarHorarioAsync(datos, 0);
 
             var horario = new Horario
             {
-                TecnicaId = model.TecnicaId,
-                DiaSemana = model.DiaSemana!.Value,
-                HoraInicio = model.HoraInicio!.Value,
-                HoraFin = model.HoraFin!.Value,
-                Disponible = model.Disponible
+                TecnicaId = datos.TecnicaId,
+                DiaSemana = datos.DiaSemana,
+                HoraInicio = datos.HoraInicio,
+                HoraFin = datos.HoraFin,
+                Disponible = datos.Disponible
             };
 
-            await Create(horario);
-            return (await GetHorarioByIdAsync(horario.Id))!;
+            return await Create(horario);
         }
 
-        public async Task<bool> UpdateHorarioAsync(int id, HorarioModel model)
+        public async Task<bool> UpdateHorarioAsync(int id, Horario datos)
         {
             var horario = await GetById(id);
             if (horario == null)
@@ -57,13 +36,13 @@ namespace CentroUnas.Infrastructure.Repositories
                 return false;
             }
 
-            await ValidarHorarioAsync(model, id);
+            await ValidarHorarioAsync(datos, id);
 
-            horario.TecnicaId = model.TecnicaId;
-            horario.DiaSemana = model.DiaSemana!.Value;
-            horario.HoraInicio = model.HoraInicio!.Value;
-            horario.HoraFin = model.HoraFin!.Value;
-            horario.Disponible = model.Disponible;
+            horario.TecnicaId = datos.TecnicaId;
+            horario.DiaSemana = datos.DiaSemana;
+            horario.HoraInicio = datos.HoraInicio;
+            horario.HoraFin = datos.HoraFin;
+            horario.Disponible = datos.Disponible;
 
             await Update(horario);
             return true;
@@ -75,48 +54,30 @@ namespace CentroUnas.Infrastructure.Repositories
             return horario != null;
         }
 
-        private async Task ValidarHorarioAsync(HorarioModel model, int id)
+        private async Task ValidarHorarioAsync(Horario datos, int id)
         {
-            var dia = model.DiaSemana!.Value;
-            var inicio = model.HoraInicio!.Value;
-            var fin = model.HoraFin!.Value;
-
-            if (inicio >= fin)
+            if (datos.HoraInicio >= datos.HoraFin)
             {
                 throw new HorarioException("La hora de inicio debe ser menor que la hora de fin");
             }
 
-            var tecnicaExists = await _context.Tecnicas.AnyAsync(t => t.Id == model.TecnicaId);
+            var tecnicaExists = await _context.Tecnicas.AnyAsync(t => t.Id == datos.TecnicaId);
             if (!tecnicaExists)
             {
-                throw new HorarioException($"La técnica con ID {model.TecnicaId} no existe");
+                throw new HorarioException($"La técnica con ID {datos.TecnicaId} no existe");
             }
 
             var cruce = await _context.Horarios.AnyAsync(h =>
                 h.Id != id &&
-                h.TecnicaId == model.TecnicaId &&
-                h.DiaSemana == dia &&
-                h.HoraInicio < fin &&
-                h.HoraFin > inicio);
+                h.TecnicaId == datos.TecnicaId &&
+                h.DiaSemana == datos.DiaSemana &&
+                h.HoraInicio < datos.HoraFin &&
+                h.HoraFin > datos.HoraInicio);
 
             if (cruce)
             {
                 throw new HorarioException("El horario se cruza con otro horario de la técnica");
             }
-        }
-
-        private static HorarioModel ToModel(Horario horario)
-        {
-            return new HorarioModel
-            {
-                HorarioId = horario.Id,
-                TecnicaId = horario.TecnicaId,
-                TecnicaNombre = $"{horario.Tecnica.Nombre} {horario.Tecnica.Apellido}",
-                DiaSemana = horario.DiaSemana,
-                HoraInicio = horario.HoraInicio,
-                HoraFin = horario.HoraFin,
-                Disponible = horario.Disponible
-            };
         }
     }
 }

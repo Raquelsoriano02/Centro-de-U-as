@@ -4,14 +4,12 @@ using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Context;
 using CentroUnas.Infrastructure.Core;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace CentroUnas.Infrastructure.Repositories
 {
-    public class TurnoRepository : BaseRepository<Turno>, ITurnoRepository
+    public class TurnoRepository : BaseRepository<Turno>
     {
         private const int IntervaloMinutos = 30;
         private const int ErrorDeadlock = 1205;
@@ -20,33 +18,9 @@ namespace CentroUnas.Infrastructure.Repositories
         {
         }
 
-        public async Task<List<TurnoModel>> GetAllTurnosAsync()
+        public async Task<List<DateTime>> GetDisponibilidadAsync(int tecnicaId, int servicioId, DateOnly fecha)
         {
-            var turnos = await _context.Turnos
-                .Include(t => t.Cliente)
-                .Include(t => t.Tecnica)
-                .Include(t => t.Servicio)
-                .Include(t => t.Pagos)
-                .ToListAsync();
-
-            return turnos.Select(ToModel).ToList();
-        }
-
-        public async Task<TurnoModel?> GetTurnoByIdAsync(int id)
-        {
-            var turno = await _context.Turnos
-                .Include(t => t.Cliente)
-                .Include(t => t.Tecnica)
-                .Include(t => t.Servicio)
-                .Include(t => t.Pagos)
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            return turno == null ? null : ToModel(turno);
-        }
-
-        public async Task<List<DisponibilidadModel>> GetDisponibilidadAsync(int tecnicaId, int servicioId, DateOnly fecha)
-        {
-            await ObtenerTecnicaActivaAsync(tecnicaId);
+            await ValidarTecnicaActivaAsync(tecnicaId);
             var servicio = await ObtenerServicioActivoAsync(servicioId);
 
             var dia = (DiaSemana)fecha.DayOfWeek;
@@ -65,7 +39,7 @@ namespace CentroUnas.Infrastructure.Repositories
                     && t.FechaHoraFin > inicioDia)
                 .ToListAsync();
 
-            var disponibles = new List<DisponibilidadModel>();
+            var disponibles = new List<DateTime>();
 
             foreach (var horario in horarios)
             {
@@ -79,11 +53,7 @@ namespace CentroUnas.Infrastructure.Repositories
 
                     if (inicio > DateTime.Now && !ocupado)
                     {
-                        disponibles.Add(new DisponibilidadModel
-                        {
-                            FechaHoraInicio = inicio,
-                            FechaHoraFin = fin
-                        });
+                        disponibles.Add(inicio);
                     }
 
                     inicio = inicio.AddMinutes(IntervaloMinutos);
@@ -93,31 +63,32 @@ namespace CentroUnas.Infrastructure.Repositories
             return disponibles;
         }
 
-        public async Task<TurnoModel> CreateTurnoAsync(TurnoModel model)
+        public async Task<Turno> CreateTurnoAsync(Turno datos)
         {
             var turno = new Turno();
 
             await EjecutarEnTransaccionAsync(async () =>
             {
-                var inicio = NormalizarFecha(model.FechaHoraInicio!.Value);
-                var servicio = await ValidarTurnoAsync(model, inicio, 0);
+                var inicio = NormalizarFecha(datos.FechaHoraInicio);
+                var servicio = await ValidarTurnoAsync(datos, inicio, 0);
 
-                turno.ClienteId = model.ClienteId;
-                turno.TecnicaId = model.TecnicaId;
-                turno.ServicioId = model.ServicioId;
+                turno.ClienteId = datos.ClienteId;
+                turno.EmpleadoId = datos.EmpleadoId;
+                turno.TecnicaId = datos.TecnicaId;
+                turno.ServicioId = datos.ServicioId;
                 turno.FechaHoraInicio = inicio;
                 turno.FechaHoraFin = inicio.AddMinutes(servicio.DuracionMinutos);
                 turno.Precio = servicio.Precio;
                 turno.Estado = EstadoTurno.Pendiente;
-                turno.Observacion = model.Observacion;
+                turno.Observacion = datos.Observacion;
 
                 await Create(turno);
             });
 
-            return (await GetTurnoByIdAsync(turno.Id))!;
+            return turno;
         }
 
-        public async Task<bool> UpdateTurnoAsync(int id, TurnoModel model)
+        public async Task<bool> UpdateTurnoAsync(int id, Turno datos)
         {
             var encontrado = true;
 
@@ -135,8 +106,8 @@ namespace CentroUnas.Infrastructure.Repositories
                     throw new TurnoException($"No se puede modificar un turno {turno.Estado}");
                 }
 
-                var inicio = NormalizarFecha(model.FechaHoraInicio!.Value);
-                var servicio = await ValidarTurnoAsync(model, inicio, id);
+                var inicio = NormalizarFecha(datos.FechaHoraInicio);
+                var servicio = await ValidarTurnoAsync(datos, inicio, id);
 
                 if (turno.ServicioId != servicio.Id)
                 {
@@ -152,12 +123,13 @@ namespace CentroUnas.Infrastructure.Repositories
                     turno.Precio = servicio.Precio;
                 }
 
-                turno.ClienteId = model.ClienteId;
-                turno.TecnicaId = model.TecnicaId;
-                turno.ServicioId = model.ServicioId;
+                turno.ClienteId = datos.ClienteId;
+                turno.EmpleadoId = datos.EmpleadoId;
+                turno.TecnicaId = datos.TecnicaId;
+                turno.ServicioId = datos.ServicioId;
                 turno.FechaHoraInicio = inicio;
                 turno.FechaHoraFin = inicio.AddMinutes(servicio.DuracionMinutos);
-                turno.Observacion = model.Observacion;
+                turno.Observacion = datos.Observacion;
 
                 await Update(turno);
             });
@@ -210,16 +182,17 @@ namespace CentroUnas.Infrastructure.Repositories
             return true;
         }
 
-        private async Task<Servicio> ValidarTurnoAsync(TurnoModel model, DateTime inicio, int id)
+        private async Task<Servicio> ValidarTurnoAsync(Turno datos, DateTime inicio, int id)
         {
-            var clienteExists = await _context.Clientes.AnyAsync(c => c.Id == model.ClienteId);
+            var clienteExists = await _context.Clientes.AnyAsync(c => c.Id == datos.ClienteId);
             if (!clienteExists)
             {
-                throw new TurnoException($"El cliente con ID {model.ClienteId} no existe");
+                throw new TurnoException($"El cliente con ID {datos.ClienteId} no existe");
             }
 
-            await ObtenerTecnicaActivaAsync(model.TecnicaId);
-            var servicio = await ObtenerServicioActivoAsync(model.ServicioId);
+            await ValidarEmpleadoActivoAsync(datos.EmpleadoId);
+            await ValidarTecnicaActivaAsync(datos.TecnicaId);
+            var servicio = await ObtenerServicioActivoAsync(datos.ServicioId);
 
             if (inicio <= DateTime.Now)
             {
@@ -232,7 +205,7 @@ namespace CentroUnas.Infrastructure.Repositories
             var horaFin = TimeOnly.FromDateTime(fin);
 
             var enHorario = fin.Date == inicio.Date && await _context.Horarios.AnyAsync(h =>
-                h.TecnicaId == model.TecnicaId &&
+                h.TecnicaId == datos.TecnicaId &&
                 h.DiaSemana == dia &&
                 h.Disponible &&
                 h.HoraInicio <= horaInicio &&
@@ -245,7 +218,7 @@ namespace CentroUnas.Infrastructure.Repositories
 
             var tecnicaOcupada = await _context.Turnos.AnyAsync(t =>
                 t.Id != id &&
-                t.TecnicaId == model.TecnicaId &&
+                t.TecnicaId == datos.TecnicaId &&
                 t.Estado != EstadoTurno.Cancelado &&
                 t.FechaHoraInicio < fin &&
                 t.FechaHoraFin > inicio);
@@ -257,7 +230,7 @@ namespace CentroUnas.Infrastructure.Repositories
 
             var clienteOcupado = await _context.Turnos.AnyAsync(t =>
                 t.Id != id &&
-                t.ClienteId == model.ClienteId &&
+                t.ClienteId == datos.ClienteId &&
                 t.Estado != EstadoTurno.Cancelado &&
                 t.FechaHoraInicio < fin &&
                 t.FechaHoraFin > inicio);
@@ -270,7 +243,21 @@ namespace CentroUnas.Infrastructure.Repositories
             return servicio;
         }
 
-        private async Task ObtenerTecnicaActivaAsync(int tecnicaId)
+        private async Task ValidarEmpleadoActivoAsync(int empleadoId)
+        {
+            var empleado = await _context.Empleados.FirstOrDefaultAsync(e => e.Id == empleadoId);
+            if (empleado == null)
+            {
+                throw new TurnoException($"El empleado con ID {empleadoId} no existe");
+            }
+
+            if (!empleado.Activo)
+            {
+                throw new TurnoException($"El empleado con ID {empleadoId} no está activo");
+            }
+        }
+
+        private async Task ValidarTecnicaActivaAsync(int tecnicaId)
         {
             var tecnica = await _context.Tecnicas.FirstOrDefaultAsync(t => t.Id == tecnicaId);
             if (tecnica == null)
@@ -319,26 +306,6 @@ namespace CentroUnas.Infrastructure.Repositories
         {
             var local = fecha.Kind == DateTimeKind.Utc ? fecha.ToLocalTime() : fecha;
             return DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
-        }
-
-        private static TurnoModel ToModel(Turno turno)
-        {
-            return new TurnoModel
-            {
-                TurnoId = turno.Id,
-                ClienteId = turno.ClienteId,
-                ClienteNombre = $"{turno.Cliente.Nombre} {turno.Cliente.Apellido}",
-                TecnicaId = turno.TecnicaId,
-                TecnicaNombre = $"{turno.Tecnica.Nombre} {turno.Tecnica.Apellido}",
-                ServicioId = turno.ServicioId,
-                ServicioNombre = turno.Servicio.Nombre,
-                FechaHoraInicio = turno.FechaHoraInicio,
-                FechaHoraFin = turno.FechaHoraFin,
-                Precio = turno.Precio,
-                TotalPagado = turno.Pagos.Sum(p => p.Monto),
-                Estado = turno.Estado,
-                Observacion = turno.Observacion
-            };
         }
     }
 }

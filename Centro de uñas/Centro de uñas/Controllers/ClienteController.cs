@@ -1,6 +1,6 @@
+using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
+using CentroUnas.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,9 +9,9 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class ClienteController : ControllerBase
     {
-        private readonly IClienteRepository _repository;
+        private readonly ClienteRepository _repository;
 
-        public ClienteController(IClienteRepository repository)
+        public ClienteController(ClienteRepository repository)
         {
             _repository = repository;
         }
@@ -19,14 +19,14 @@ namespace Centro_de_uñas.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllClientes()
         {
-            var clientes = await _repository.GetAllClientesAsync();
+            var clientes = await _repository.GetAll();
             return Ok(clientes);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetClienteById(int id)
         {
-            var cliente = await _repository.GetClienteByIdAsync(id);
+            var cliente = await _repository.GetById(id);
             if (cliente == null)
             {
                 return NotFound($"Cliente con id {id} no encontrado");
@@ -36,12 +36,12 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateCliente([FromBody] ClienteModel model)
+        public async Task<IActionResult> CreateCliente([FromBody] Cliente datos)
         {
             try
             {
-                var cliente = await _repository.CreateClienteAsync(model);
-                return CreatedAtAction(nameof(GetClienteById), new { id = cliente.ClienteId }, cliente);
+                var cliente = await _repository.CreateClienteAsync(datos);
+                return CreatedAtAction(nameof(GetClienteById), new { id = cliente.Id }, cliente);
             }
             catch (ClienteException ex)
             {
@@ -50,11 +50,11 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCliente(int id, [FromBody] ClienteModel model)
+        public async Task<IActionResult> UpdateCliente(int id, [FromBody] Cliente datos)
         {
             try
             {
-                var actualizado = await _repository.UpdateClienteAsync(id, model);
+                var actualizado = await _repository.UpdateClienteAsync(id, datos);
                 if (!actualizado)
                 {
                     return NotFound($"Cliente con id {id} no encontrado");

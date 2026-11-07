@@ -63,6 +63,55 @@ namespace CentroUnas.Infrastructure.Migrations
                     b.ToTable("Clientes", (string)null);
                 });
 
+            modelBuilder.Entity("CentroUnas.Domain.Entities.Empleado", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Apellido")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Cargo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
+
+                    b.ToTable("Empleados", (string)null);
+                });
+
             modelBuilder.Entity("CentroUnas.Domain.Entities.Horario", b =>
                 {
                     b.Property<int>("Id")
@@ -236,6 +285,9 @@ namespace CentroUnas.Infrastructure.Migrations
                     b.Property<int>("ClienteId")
                         .HasColumnType("int");
 
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -266,6 +318,8 @@ namespace CentroUnas.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EmpleadoId");
 
                     b.HasIndex("ServicioId");
 
@@ -306,6 +360,12 @@ namespace CentroUnas.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("CentroUnas.Domain.Entities.Empleado", "Empleado")
+                        .WithMany("Turnos")
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CentroUnas.Domain.Entities.Servicio", "Servicio")
                         .WithMany("Turnos")
                         .HasForeignKey("ServicioId")
@@ -320,12 +380,19 @@ namespace CentroUnas.Infrastructure.Migrations
 
                     b.Navigation("Cliente");
 
+                    b.Navigation("Empleado");
+
                     b.Navigation("Servicio");
 
                     b.Navigation("Tecnica");
                 });
 
             modelBuilder.Entity("CentroUnas.Domain.Entities.Cliente", b =>
+                {
+                    b.Navigation("Turnos");
+                });
+
+            modelBuilder.Entity("CentroUnas.Domain.Entities.Empleado", b =>
                 {
                     b.Navigation("Turnos");
                 });

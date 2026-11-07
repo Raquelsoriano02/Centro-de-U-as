@@ -11,6 +11,7 @@ namespace CentroUnas.Infrastructure.Context
         }
 
         public DbSet<Cliente> Clientes { get; set; }
+        public DbSet<Empleado> Empleados { get; set; }
         public DbSet<Tecnica> Tecnicas { get; set; }
         public DbSet<Servicio> Servicios { get; set; }
         public DbSet<Horario> Horarios { get; set; }
@@ -45,6 +46,21 @@ namespace CentroUnas.Infrastructure.Context
                 entity.Property(e => e.Email).HasMaxLength(150);
                 entity.Property(e => e.Telefono).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Especialidad).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.FechaRegistro).HasDefaultValueSql("GETDATE()");
+
+                entity.HasIndex(e => e.Email).IsUnique();
+            });
+
+            modelBuilder.Entity<Empleado>(entity =>
+            {
+                entity.ToTable("Empleados");
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Apellido).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Email).HasMaxLength(150);
+                entity.Property(e => e.Telefono).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Cargo).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.FechaRegistro).HasDefaultValueSql("GETDATE()");
 
                 entity.HasIndex(e => e.Email).IsUnique();
@@ -100,6 +116,11 @@ namespace CentroUnas.Infrastructure.Context
                 entity.HasOne(e => e.Servicio)
                     .WithMany(s => s.Turnos)
                     .HasForeignKey(e => e.ServicioId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Empleado)
+                    .WithMany(em => em.Turnos)
+                    .HasForeignKey(e => e.EmpleadoId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(e => new { e.TecnicaId, e.FechaHoraInicio });

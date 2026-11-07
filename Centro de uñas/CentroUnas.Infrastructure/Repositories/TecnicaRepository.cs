@@ -2,49 +2,34 @@ using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Context;
 using CentroUnas.Infrastructure.Core;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace CentroUnas.Infrastructure.Repositories
 {
-    public class TecnicaRepository : BaseRepository<Tecnica>, ITecnicaRepository
+    public class TecnicaRepository : BaseRepository<Tecnica>
     {
         public TecnicaRepository(CentroUnasContext context) : base(context)
         {
         }
 
-        public async Task<List<TecnicaModel>> GetAllTecnicasAsync()
+        public async Task<Tecnica> CreateTecnicaAsync(Tecnica datos)
         {
-            var tecnicas = await GetAll();
-            return tecnicas.Select(ToModel).ToList();
-        }
-
-        public async Task<TecnicaModel?> GetTecnicaByIdAsync(int id)
-        {
-            var tecnica = await GetById(id);
-            return tecnica == null ? null : ToModel(tecnica);
-        }
-
-        public async Task<TecnicaModel> CreateTecnicaAsync(TecnicaModel model)
-        {
-            await ValidarEmailAsync(model.Email, 0);
+            await ValidarEmailAsync(datos.Email, 0);
 
             var tecnica = new Tecnica
             {
-                Nombre = model.Nombre,
-                Apellido = model.Apellido,
-                Email = model.Email,
-                Telefono = model.Telefono,
-                Especialidad = model.Especialidad,
-                Activa = model.Activa
+                Nombre = datos.Nombre,
+                Apellido = datos.Apellido,
+                Email = datos.Email,
+                Telefono = datos.Telefono,
+                Especialidad = datos.Especialidad,
+                Activa = datos.Activa
             };
 
-            await Create(tecnica);
-            return ToModel(tecnica);
+            return await Create(tecnica);
         }
 
-        public async Task<bool> UpdateTecnicaAsync(int id, TecnicaModel model)
+        public async Task<bool> UpdateTecnicaAsync(int id, Tecnica datos)
         {
             var tecnica = await GetById(id);
             if (tecnica == null)
@@ -52,14 +37,14 @@ namespace CentroUnas.Infrastructure.Repositories
                 return false;
             }
 
-            await ValidarEmailAsync(model.Email, id);
+            await ValidarEmailAsync(datos.Email, id);
 
-            tecnica.Nombre = model.Nombre;
-            tecnica.Apellido = model.Apellido;
-            tecnica.Email = model.Email;
-            tecnica.Telefono = model.Telefono;
-            tecnica.Especialidad = model.Especialidad;
-            tecnica.Activa = model.Activa;
+            tecnica.Nombre = datos.Nombre;
+            tecnica.Apellido = datos.Apellido;
+            tecnica.Email = datos.Email;
+            tecnica.Telefono = datos.Telefono;
+            tecnica.Especialidad = datos.Especialidad;
+            tecnica.Activa = datos.Activa;
 
             await Update(tecnica);
             return true;
@@ -93,20 +78,6 @@ namespace CentroUnas.Infrastructure.Repositories
                     throw new TecnicaException($"El email {email} ya está registrado");
                 }
             }
-        }
-
-        private static TecnicaModel ToModel(Tecnica tecnica)
-        {
-            return new TecnicaModel
-            {
-                TecnicaId = tecnica.Id,
-                Nombre = tecnica.Nombre,
-                Apellido = tecnica.Apellido,
-                Email = tecnica.Email,
-                Telefono = tecnica.Telefono,
-                Especialidad = tecnica.Especialidad,
-                Activa = tecnica.Activa
-            };
         }
     }
 }

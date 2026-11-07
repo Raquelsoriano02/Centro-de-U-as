@@ -1,6 +1,6 @@
+using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
+using CentroUnas.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,9 +9,9 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class HorarioController : ControllerBase
     {
-        private readonly IHorarioRepository _repository;
+        private readonly HorarioRepository _repository;
 
-        public HorarioController(IHorarioRepository repository)
+        public HorarioController(HorarioRepository repository)
         {
             _repository = repository;
         }
@@ -19,14 +19,14 @@ namespace Centro_de_uñas.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllHorarios()
         {
-            var horarios = await _repository.GetAllHorariosAsync();
+            var horarios = await _repository.GetAll();
             return Ok(horarios);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetHorarioById(int id)
         {
-            var horario = await _repository.GetHorarioByIdAsync(id);
+            var horario = await _repository.GetById(id);
             if (horario == null)
             {
                 return NotFound($"Horario con id {id} no encontrado");
@@ -36,12 +36,12 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateHorario([FromBody] HorarioModel model)
+        public async Task<IActionResult> CreateHorario([FromBody] Horario datos)
         {
             try
             {
-                var horario = await _repository.CreateHorarioAsync(model);
-                return CreatedAtAction(nameof(GetHorarioById), new { id = horario.HorarioId }, horario);
+                var horario = await _repository.CreateHorarioAsync(datos);
+                return CreatedAtAction(nameof(GetHorarioById), new { id = horario.Id }, horario);
             }
             catch (HorarioException ex)
             {
@@ -50,11 +50,11 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateHorario(int id, [FromBody] HorarioModel model)
+        public async Task<IActionResult> UpdateHorario(int id, [FromBody] Horario datos)
         {
             try
             {
-                var actualizado = await _repository.UpdateHorarioAsync(id, model);
+                var actualizado = await _repository.UpdateHorarioAsync(id, datos);
                 if (!actualizado)
                 {
                     return NotFound($"Horario con id {id} no encontrado");

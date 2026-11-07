@@ -1,6 +1,6 @@
+using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
+using CentroUnas.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,9 +9,9 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class TecnicaController : ControllerBase
     {
-        private readonly ITecnicaRepository _repository;
+        private readonly TecnicaRepository _repository;
 
-        public TecnicaController(ITecnicaRepository repository)
+        public TecnicaController(TecnicaRepository repository)
         {
             _repository = repository;
         }
@@ -19,14 +19,14 @@ namespace Centro_de_uñas.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllTecnicas()
         {
-            var tecnicas = await _repository.GetAllTecnicasAsync();
+            var tecnicas = await _repository.GetAll();
             return Ok(tecnicas);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTecnicaById(int id)
         {
-            var tecnica = await _repository.GetTecnicaByIdAsync(id);
+            var tecnica = await _repository.GetById(id);
             if (tecnica == null)
             {
                 return NotFound($"Técnica con id {id} no encontrada");
@@ -36,12 +36,12 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTecnica([FromBody] TecnicaModel model)
+        public async Task<IActionResult> CreateTecnica([FromBody] Tecnica datos)
         {
             try
             {
-                var tecnica = await _repository.CreateTecnicaAsync(model);
-                return CreatedAtAction(nameof(GetTecnicaById), new { id = tecnica.TecnicaId }, tecnica);
+                var tecnica = await _repository.CreateTecnicaAsync(datos);
+                return CreatedAtAction(nameof(GetTecnicaById), new { id = tecnica.Id }, tecnica);
             }
             catch (TecnicaException ex)
             {
@@ -50,11 +50,11 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTecnica(int id, [FromBody] TecnicaModel model)
+        public async Task<IActionResult> UpdateTecnica(int id, [FromBody] Tecnica datos)
         {
             try
             {
-                var actualizado = await _repository.UpdateTecnicaAsync(id, model);
+                var actualizado = await _repository.UpdateTecnicaAsync(id, datos);
                 if (!actualizado)
                 {
                     return NotFound($"Técnica con id {id} no encontrada");

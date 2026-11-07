@@ -1,6 +1,7 @@
+using CentroUnas.Domain.Core;
+using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
+using CentroUnas.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,9 +10,9 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class TurnoController : ControllerBase
     {
-        private readonly ITurnoRepository _repository;
+        private readonly TurnoRepository _repository;
 
-        public TurnoController(ITurnoRepository repository)
+        public TurnoController(TurnoRepository repository)
         {
             _repository = repository;
         }
@@ -19,14 +20,14 @@ namespace Centro_de_uñas.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllTurnos()
         {
-            var turnos = await _repository.GetAllTurnosAsync();
+            var turnos = await _repository.GetAll();
             return Ok(turnos);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTurnoById(int id)
         {
-            var turno = await _repository.GetTurnoByIdAsync(id);
+            var turno = await _repository.GetById(id);
             if (turno == null)
             {
                 return NotFound($"Turno con id {id} no encontrado");
@@ -50,12 +51,12 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTurno([FromBody] TurnoModel model)
+        public async Task<IActionResult> CreateTurno([FromBody] Turno datos)
         {
             try
             {
-                var turno = await _repository.CreateTurnoAsync(model);
-                return CreatedAtAction(nameof(GetTurnoById), new { id = turno.TurnoId }, turno);
+                var turno = await _repository.CreateTurnoAsync(datos);
+                return CreatedAtAction(nameof(GetTurnoById), new { id = turno.Id }, turno);
             }
             catch (TurnoException ex)
             {
@@ -64,11 +65,11 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTurno(int id, [FromBody] TurnoModel model)
+        public async Task<IActionResult> UpdateTurno(int id, [FromBody] Turno datos)
         {
             try
             {
-                var actualizado = await _repository.UpdateTurnoAsync(id, model);
+                var actualizado = await _repository.UpdateTurnoAsync(id, datos);
                 if (!actualizado)
                 {
                     return NotFound($"Turno con id {id} no encontrado");
@@ -83,11 +84,11 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPut("{id}/estado")]
-        public async Task<IActionResult> UpdateEstado(int id, [FromBody] EstadoTurnoModel model)
+        public async Task<IActionResult> UpdateEstado(int id, [FromBody] EstadoTurno estado)
         {
             try
             {
-                var actualizado = await _repository.UpdateEstadoAsync(id, model.Estado!.Value);
+                var actualizado = await _repository.UpdateEstadoAsync(id, estado);
                 if (!actualizado)
                 {
                     return NotFound($"Turno con id {id} no encontrado");

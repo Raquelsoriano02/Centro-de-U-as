@@ -2,47 +2,32 @@ using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Context;
 using CentroUnas.Infrastructure.Core;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace CentroUnas.Infrastructure.Repositories
 {
-    public class ClienteRepository : BaseRepository<Cliente>, IClienteRepository
+    public class ClienteRepository : BaseRepository<Cliente>
     {
         public ClienteRepository(CentroUnasContext context) : base(context)
         {
         }
 
-        public async Task<List<ClienteModel>> GetAllClientesAsync()
+        public async Task<Cliente> CreateClienteAsync(Cliente datos)
         {
-            var clientes = await GetAll();
-            return clientes.Select(ToModel).ToList();
-        }
-
-        public async Task<ClienteModel?> GetClienteByIdAsync(int id)
-        {
-            var cliente = await GetById(id);
-            return cliente == null ? null : ToModel(cliente);
-        }
-
-        public async Task<ClienteModel> CreateClienteAsync(ClienteModel model)
-        {
-            await ValidarEmailAsync(model.Email, 0);
+            await ValidarEmailAsync(datos.Email, 0);
 
             var cliente = new Cliente
             {
-                Nombre = model.Nombre,
-                Apellido = model.Apellido,
-                Email = model.Email,
-                Telefono = model.Telefono
+                Nombre = datos.Nombre,
+                Apellido = datos.Apellido,
+                Email = datos.Email,
+                Telefono = datos.Telefono
             };
 
-            await Create(cliente);
-            return ToModel(cliente);
+            return await Create(cliente);
         }
 
-        public async Task<bool> UpdateClienteAsync(int id, ClienteModel model)
+        public async Task<bool> UpdateClienteAsync(int id, Cliente datos)
         {
             var cliente = await GetById(id);
             if (cliente == null)
@@ -50,12 +35,12 @@ namespace CentroUnas.Infrastructure.Repositories
                 return false;
             }
 
-            await ValidarEmailAsync(model.Email, id);
+            await ValidarEmailAsync(datos.Email, id);
 
-            cliente.Nombre = model.Nombre;
-            cliente.Apellido = model.Apellido;
-            cliente.Email = model.Email;
-            cliente.Telefono = model.Telefono;
+            cliente.Nombre = datos.Nombre;
+            cliente.Apellido = datos.Apellido;
+            cliente.Email = datos.Email;
+            cliente.Telefono = datos.Telefono;
 
             await Update(cliente);
             return true;
@@ -89,18 +74,6 @@ namespace CentroUnas.Infrastructure.Repositories
                     throw new ClienteException($"El email {email} ya está registrado");
                 }
             }
-        }
-
-        private static ClienteModel ToModel(Cliente cliente)
-        {
-            return new ClienteModel
-            {
-                ClienteId = cliente.Id,
-                Nombre = cliente.Nombre,
-                Apellido = cliente.Apellido,
-                Email = cliente.Email,
-                Telefono = cliente.Telefono
-            };
         }
     }
 }

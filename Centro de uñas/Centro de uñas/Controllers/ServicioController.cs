@@ -1,6 +1,6 @@
+using CentroUnas.Domain.Entities;
 using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Interfaces;
-using CentroUnas.Infrastructure.Models;
+using CentroUnas.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,9 +9,9 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class ServicioController : ControllerBase
     {
-        private readonly IServicioRepository _repository;
+        private readonly ServicioRepository _repository;
 
-        public ServicioController(IServicioRepository repository)
+        public ServicioController(ServicioRepository repository)
         {
             _repository = repository;
         }
@@ -19,14 +19,14 @@ namespace Centro_de_uñas.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllServicios()
         {
-            var servicios = await _repository.GetAllServiciosAsync();
+            var servicios = await _repository.GetAll();
             return Ok(servicios);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetServicioById(int id)
         {
-            var servicio = await _repository.GetServicioByIdAsync(id);
+            var servicio = await _repository.GetById(id);
             if (servicio == null)
             {
                 return NotFound($"Servicio con id {id} no encontrado");
@@ -36,16 +36,16 @@ namespace Centro_de_uñas.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateServicio([FromBody] ServicioModel model)
+        public async Task<IActionResult> CreateServicio([FromBody] Servicio datos)
         {
-            var servicio = await _repository.CreateServicioAsync(model);
-            return CreatedAtAction(nameof(GetServicioById), new { id = servicio.ServicioId }, servicio);
+            var servicio = await _repository.CreateServicioAsync(datos);
+            return CreatedAtAction(nameof(GetServicioById), new { id = servicio.Id }, servicio);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateServicio(int id, [FromBody] ServicioModel model)
+        public async Task<IActionResult> UpdateServicio(int id, [FromBody] Servicio datos)
         {
-            var actualizado = await _repository.UpdateServicioAsync(id, model);
+            var actualizado = await _repository.UpdateServicioAsync(id, datos);
             if (!actualizado)
             {
                 return NotFound($"Servicio con id {id} no encontrado");
