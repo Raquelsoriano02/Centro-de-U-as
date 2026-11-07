@@ -1,6 +1,5 @@
-using CentroUnas.Domain.Entities;
-using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Repositories;
+using CentroUnas.Application.Dtos.Horario;
+using CentroUnas.Application.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,72 +8,73 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class HorarioController : ControllerBase
     {
-        private readonly HorarioRepository _repository;
+        private readonly HorarioService _service;
 
-        public HorarioController(HorarioRepository repository)
+        public HorarioController(HorarioService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllHorarios()
         {
-            var horarios = await _repository.GetAll();
-            return Ok(horarios);
+            var result = await _service.GetAllHorariosAsync();
+            return Ok(result.Data);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetHorarioById(int id)
         {
-            var horario = await _repository.GetById(id);
-            if (horario == null)
+            var result = await _service.GetHorarioByIdAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Horario con id {id} no encontrado");
+                return NotFound(result.Message);
             }
 
-            return Ok(horario);
+            return Ok(result.Data);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateHorario([FromBody] Horario datos)
+        public async Task<IActionResult> CreateHorario([FromBody] CreateHorarioDto dto)
         {
-            try
+            var result = await _service.CreateHorarioAsync(dto);
+            if (!result.Success)
             {
-                var horario = await _repository.CreateHorarioAsync(datos);
-                return CreatedAtAction(nameof(GetHorarioById), new { id = horario.Id }, horario);
+                return BadRequest(result.Message);
             }
-            catch (HorarioException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            return CreatedAtAction(nameof(GetHorarioById), new { id = result.Data!.Id }, result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateHorario(int id, [FromBody] Horario datos)
+        public async Task<IActionResult> UpdateHorario(int id, [FromBody] UpdateHorarioDto dto)
         {
-            try
+            var result = await _service.UpdateHorarioAsync(id, dto);
+            if (result.NotFound)
             {
-                var actualizado = await _repository.UpdateHorarioAsync(id, datos);
-                if (!actualizado)
-                {
-                    return NotFound($"Horario con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (HorarioException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteHorario(int id)
         {
-            var eliminado = await _repository.DeleteHorarioAsync(id);
-            if (!eliminado)
+            var result = await _service.DeleteHorarioAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Horario con id {id} no encontrado");
+                return NotFound(result.Message);
+            }
+
+            if (!result.Success)
+            {
+                return BadRequest(result.Message);
             }
 
             return NoContent();

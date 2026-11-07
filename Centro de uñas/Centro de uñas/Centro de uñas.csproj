@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CentroUnas.Application\CentroUnas.Application.csproj" />
     <ProjectReference Include="..\CentroUnas.Domain\CentroUnas.Domain.csproj" />
     <ProjectReference Include="..\CentroUnas.Infrastructure\CentroUnas.Infrastructure.csproj" />
   </ItemGroup>

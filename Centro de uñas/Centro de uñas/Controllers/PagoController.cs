@@ -1,6 +1,5 @@
-using CentroUnas.Domain.Entities;
-using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Repositories;
+using CentroUnas.Application.Dtos.Pago;
+using CentroUnas.Application.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,72 +8,73 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class PagoController : ControllerBase
     {
-        private readonly PagoRepository _repository;
+        private readonly PagoService _service;
 
-        public PagoController(PagoRepository repository)
+        public PagoController(PagoService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllPagos()
         {
-            var pagos = await _repository.GetAll();
-            return Ok(pagos);
+            var result = await _service.GetAllPagosAsync();
+            return Ok(result.Data);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPagoById(int id)
         {
-            var pago = await _repository.GetById(id);
-            if (pago == null)
+            var result = await _service.GetPagoByIdAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Pago con id {id} no encontrado");
+                return NotFound(result.Message);
             }
 
-            return Ok(pago);
+            return Ok(result.Data);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreatePago([FromBody] Pago datos)
+        public async Task<IActionResult> CreatePago([FromBody] CreatePagoDto dto)
         {
-            try
+            var result = await _service.CreatePagoAsync(dto);
+            if (!result.Success)
             {
-                var pago = await _repository.CreatePagoAsync(datos);
-                return CreatedAtAction(nameof(GetPagoById), new { id = pago.Id }, pago);
+                return BadRequest(result.Message);
             }
-            catch (PagoException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            return CreatedAtAction(nameof(GetPagoById), new { id = result.Data!.Id }, result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePago(int id, [FromBody] Pago datos)
+        public async Task<IActionResult> UpdatePago(int id, [FromBody] UpdatePagoDto dto)
         {
-            try
+            var result = await _service.UpdatePagoAsync(id, dto);
+            if (result.NotFound)
             {
-                var actualizado = await _repository.UpdatePagoAsync(id, datos);
-                if (!actualizado)
-                {
-                    return NotFound($"Pago con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (PagoException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePago(int id)
         {
-            var eliminado = await _repository.DeletePagoAsync(id);
-            if (!eliminado)
+            var result = await _service.DeletePagoAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Pago con id {id} no encontrado");
+                return NotFound(result.Message);
+            }
+
+            if (!result.Success)
+            {
+                return BadRequest(result.Message);
             }
 
             return NoContent();

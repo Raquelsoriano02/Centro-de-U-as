@@ -1,6 +1,5 @@
-using CentroUnas.Domain.Entities;
-using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Repositories;
+using CentroUnas.Application.Dtos.Tecnica;
+using CentroUnas.Application.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,82 +8,76 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class TecnicaController : ControllerBase
     {
-        private readonly TecnicaRepository _repository;
+        private readonly TecnicaService _service;
 
-        public TecnicaController(TecnicaRepository repository)
+        public TecnicaController(TecnicaService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllTecnicas()
         {
-            var tecnicas = await _repository.GetAll();
-            return Ok(tecnicas);
+            var result = await _service.GetAllTecnicasAsync();
+            return Ok(result.Data);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTecnicaById(int id)
         {
-            var tecnica = await _repository.GetById(id);
-            if (tecnica == null)
+            var result = await _service.GetTecnicaByIdAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Técnica con id {id} no encontrada");
+                return NotFound(result.Message);
             }
 
-            return Ok(tecnica);
+            return Ok(result.Data);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTecnica([FromBody] Tecnica datos)
+        public async Task<IActionResult> CreateTecnica([FromBody] CreateTecnicaDto dto)
         {
-            try
+            var result = await _service.CreateTecnicaAsync(dto);
+            if (!result.Success)
             {
-                var tecnica = await _repository.CreateTecnicaAsync(datos);
-                return CreatedAtAction(nameof(GetTecnicaById), new { id = tecnica.Id }, tecnica);
+                return BadRequest(result.Message);
             }
-            catch (TecnicaException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            return CreatedAtAction(nameof(GetTecnicaById), new { id = result.Data!.Id }, result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTecnica(int id, [FromBody] Tecnica datos)
+        public async Task<IActionResult> UpdateTecnica(int id, [FromBody] UpdateTecnicaDto dto)
         {
-            try
+            var result = await _service.UpdateTecnicaAsync(id, dto);
+            if (result.NotFound)
             {
-                var actualizado = await _repository.UpdateTecnicaAsync(id, datos);
-                if (!actualizado)
-                {
-                    return NotFound($"Técnica con id {id} no encontrada");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (TecnicaException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTecnica(int id)
         {
-            try
+            var result = await _service.DeleteTecnicaAsync(id);
+            if (result.NotFound)
             {
-                var eliminado = await _repository.DeleteTecnicaAsync(id);
-                if (!eliminado)
-                {
-                    return NotFound($"Técnica con id {id} no encontrada");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (TecnicaException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
     }
 }

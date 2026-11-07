@@ -1,6 +1,5 @@
-using CentroUnas.Domain.Entities;
-using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Repositories;
+using CentroUnas.Application.Dtos.Servicio;
+using CentroUnas.Application.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,46 +8,56 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class ServicioController : ControllerBase
     {
-        private readonly ServicioRepository _repository;
+        private readonly ServicioService _service;
 
-        public ServicioController(ServicioRepository repository)
+        public ServicioController(ServicioService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllServicios()
         {
-            var servicios = await _repository.GetAll();
-            return Ok(servicios);
+            var result = await _service.GetAllServiciosAsync();
+            return Ok(result.Data);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetServicioById(int id)
         {
-            var servicio = await _repository.GetById(id);
-            if (servicio == null)
+            var result = await _service.GetServicioByIdAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Servicio con id {id} no encontrado");
+                return NotFound(result.Message);
             }
 
-            return Ok(servicio);
+            return Ok(result.Data);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateServicio([FromBody] Servicio datos)
+        public async Task<IActionResult> CreateServicio([FromBody] CreateServicioDto dto)
         {
-            var servicio = await _repository.CreateServicioAsync(datos);
-            return CreatedAtAction(nameof(GetServicioById), new { id = servicio.Id }, servicio);
+            var result = await _service.CreateServicioAsync(dto);
+            if (!result.Success)
+            {
+                return BadRequest(result.Message);
+            }
+
+            return CreatedAtAction(nameof(GetServicioById), new { id = result.Data!.Id }, result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateServicio(int id, [FromBody] Servicio datos)
+        public async Task<IActionResult> UpdateServicio(int id, [FromBody] UpdateServicioDto dto)
         {
-            var actualizado = await _repository.UpdateServicioAsync(id, datos);
-            if (!actualizado)
+            var result = await _service.UpdateServicioAsync(id, dto);
+            if (result.NotFound)
             {
-                return NotFound($"Servicio con id {id} no encontrado");
+                return NotFound(result.Message);
+            }
+
+            if (!result.Success)
+            {
+                return BadRequest(result.Message);
             }
 
             return NoContent();
@@ -57,20 +66,18 @@ namespace Centro_de_uñas.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteServicio(int id)
         {
-            try
+            var result = await _service.DeleteServicioAsync(id);
+            if (result.NotFound)
             {
-                var eliminado = await _repository.DeleteServicioAsync(id);
-                if (!eliminado)
-                {
-                    return NotFound($"Servicio con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (ServicioException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
     }
 }

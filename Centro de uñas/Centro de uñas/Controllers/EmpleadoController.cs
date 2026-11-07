@@ -1,6 +1,5 @@
-using CentroUnas.Domain.Entities;
-using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Repositories;
+using CentroUnas.Application.Dtos.Empleado;
+using CentroUnas.Application.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,82 +8,76 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class EmpleadoController : ControllerBase
     {
-        private readonly EmpleadoRepository _repository;
+        private readonly EmpleadoService _service;
 
-        public EmpleadoController(EmpleadoRepository repository)
+        public EmpleadoController(EmpleadoService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllEmpleados()
         {
-            var empleados = await _repository.GetAll();
-            return Ok(empleados);
+            var result = await _service.GetAllEmpleadosAsync();
+            return Ok(result.Data);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEmpleadoById(int id)
         {
-            var empleado = await _repository.GetById(id);
-            if (empleado == null)
+            var result = await _service.GetEmpleadoByIdAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Empleado con id {id} no encontrado");
+                return NotFound(result.Message);
             }
 
-            return Ok(empleado);
+            return Ok(result.Data);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateEmpleado([FromBody] Empleado datos)
+        public async Task<IActionResult> CreateEmpleado([FromBody] CreateEmpleadoDto dto)
         {
-            try
+            var result = await _service.CreateEmpleadoAsync(dto);
+            if (!result.Success)
             {
-                var empleado = await _repository.CreateEmpleadoAsync(datos);
-                return CreatedAtAction(nameof(GetEmpleadoById), new { id = empleado.Id }, empleado);
+                return BadRequest(result.Message);
             }
-            catch (EmpleadoException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            return CreatedAtAction(nameof(GetEmpleadoById), new { id = result.Data!.Id }, result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateEmpleado(int id, [FromBody] Empleado datos)
+        public async Task<IActionResult> UpdateEmpleado(int id, [FromBody] UpdateEmpleadoDto dto)
         {
-            try
+            var result = await _service.UpdateEmpleadoAsync(id, dto);
+            if (result.NotFound)
             {
-                var actualizado = await _repository.UpdateEmpleadoAsync(id, datos);
-                if (!actualizado)
-                {
-                    return NotFound($"Empleado con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (EmpleadoException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmpleado(int id)
         {
-            try
+            var result = await _service.DeleteEmpleadoAsync(id);
+            if (result.NotFound)
             {
-                var eliminado = await _repository.DeleteEmpleadoAsync(id);
-                if (!eliminado)
-                {
-                    return NotFound($"Empleado con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (EmpleadoException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
     }
 }

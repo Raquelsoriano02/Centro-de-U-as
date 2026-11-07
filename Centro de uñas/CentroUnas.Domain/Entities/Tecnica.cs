@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using CentroUnas.Domain.Core;
 
 namespace CentroUnas.Domain.Entities
@@ -12,10 +11,8 @@ namespace CentroUnas.Domain.Entities
 
         public bool Activa { get; set; } = true;
 
-        [JsonIgnore]
         public virtual ICollection<Horario> Horarios { get; set; } = new List<Horario>();
 
-        [JsonIgnore]
         public virtual ICollection<Turno> Turnos { get; set; } = new List<Turno>();
     }
 }

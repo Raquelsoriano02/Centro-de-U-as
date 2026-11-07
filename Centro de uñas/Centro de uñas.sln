@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CentroUnas.Domain", "Centro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CentroUnas.Infrastructure", "CentroUnas.Infrastructure\CentroUnas.Infrastructure.csproj", "{D777E401-ADDB-47A1-B689-075A3E8DCCDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CentroUnas.Application", "CentroUnas.Application\CentroUnas.Application.csproj", "{40EACE53-FD41-43A4-B4F3-FBFC38D47930}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{D777E401-ADDB-47A1-B689-075A3E8DCCDE}.Release|x64.Build.0 = Release|Any CPU
 		{D777E401-ADDB-47A1-B689-075A3E8DCCDE}.Release|x86.ActiveCfg = Release|Any CPU
 		{D777E401-ADDB-47A1-B689-075A3E8DCCDE}.Release|x86.Build.0 = Release|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Debug|x64.Build.0 = Debug|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Debug|x86.Build.0 = Debug|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Release|x64.ActiveCfg = Release|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Release|x64.Build.0 = Release|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Release|x86.ActiveCfg = Release|Any CPU
+		{40EACE53-FD41-43A4-B4F3-FBFC38D47930}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

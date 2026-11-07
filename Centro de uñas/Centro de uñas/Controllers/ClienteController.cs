@@ -1,6 +1,5 @@
-using CentroUnas.Domain.Entities;
-using CentroUnas.Infrastructure.Exceptions;
-using CentroUnas.Infrastructure.Repositories;
+using CentroUnas.Application.Dtos.Cliente;
+using CentroUnas.Application.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Centro_de_uñas.Controllers
@@ -9,82 +8,76 @@ namespace Centro_de_uñas.Controllers
     [Route("api/[controller]")]
     public class ClienteController : ControllerBase
     {
-        private readonly ClienteRepository _repository;
+        private readonly ClienteService _service;
 
-        public ClienteController(ClienteRepository repository)
+        public ClienteController(ClienteService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllClientes()
         {
-            var clientes = await _repository.GetAll();
-            return Ok(clientes);
+            var result = await _service.GetAllClientesAsync();
+            return Ok(result.Data);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetClienteById(int id)
         {
-            var cliente = await _repository.GetById(id);
-            if (cliente == null)
+            var result = await _service.GetClienteByIdAsync(id);
+            if (result.NotFound)
             {
-                return NotFound($"Cliente con id {id} no encontrado");
+                return NotFound(result.Message);
             }
 
-            return Ok(cliente);
+            return Ok(result.Data);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateCliente([FromBody] Cliente datos)
+        public async Task<IActionResult> CreateCliente([FromBody] CreateClienteDto dto)
         {
-            try
+            var result = await _service.CreateClienteAsync(dto);
+            if (!result.Success)
             {
-                var cliente = await _repository.CreateClienteAsync(datos);
-                return CreatedAtAction(nameof(GetClienteById), new { id = cliente.Id }, cliente);
+                return BadRequest(result.Message);
             }
-            catch (ClienteException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            return CreatedAtAction(nameof(GetClienteById), new { id = result.Data!.Id }, result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCliente(int id, [FromBody] Cliente datos)
+        public async Task<IActionResult> UpdateCliente(int id, [FromBody] UpdateClienteDto dto)
         {
-            try
+            var result = await _service.UpdateClienteAsync(id, dto);
+            if (result.NotFound)
             {
-                var actualizado = await _repository.UpdateClienteAsync(id, datos);
-                if (!actualizado)
-                {
-                    return NotFound($"Cliente con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (ClienteException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCliente(int id)
         {
-            try
+            var result = await _service.DeleteClienteAsync(id);
+            if (result.NotFound)
             {
-                var eliminado = await _repository.DeleteClienteAsync(id);
-                if (!eliminado)
-                {
-                    return NotFound($"Cliente con id {id} no encontrado");
-                }
+                return NotFound(result.Message);
+            }
 
-                return NoContent();
-            }
-            catch (ClienteException ex)
+            if (!result.Success)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(result.Message);
             }
+
+            return NoContent();
         }
     }
 }

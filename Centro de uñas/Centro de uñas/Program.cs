@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CentroUnas.Application.Service;
 using CentroUnas.Infrastructure.Context;
 using CentroUnas.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,14 @@ namespace Centro_de_uñas
             builder.Services.AddScoped<HorarioRepository>();
             builder.Services.AddScoped<TurnoRepository>();
             builder.Services.AddScoped<PagoRepository>();
+
+            builder.Services.AddScoped<ClienteService>();
+            builder.Services.AddScoped<EmpleadoService>();
+            builder.Services.AddScoped<TecnicaService>();
+            builder.Services.AddScoped<ServicioService>();
+            builder.Services.AddScoped<HorarioService>();
+            builder.Services.AddScoped<TurnoService>();
+            builder.Services.AddScoped<PagoService>();
 
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
