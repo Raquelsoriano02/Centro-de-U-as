@@ -42,6 +42,18 @@ namespace Centro_de_uñas
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            var origenes = builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() ?? Array.Empty<string>();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Frontend", policy =>
+                {
+                    policy.WithOrigins(origenes)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
+
             var app = builder.Build();
 
             if (app.Environment.IsDevelopment())
@@ -51,6 +63,8 @@ namespace Centro_de_uñas
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("Frontend");
 
             app.UseAuthorization();
 

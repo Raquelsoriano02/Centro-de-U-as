@@ -1,0 +1,314 @@
+@page "/turnos"
+@using System.Globalization
+@inject ApiService Api
+
+<PageTitle>Turnos</PageTitle>
+
+<h1 class="mb-3">Turnos</h1>
+
+<Alerta @bind-Mensaje="error" />
+<Alerta @bind-Mensaje="exito" Tipo="success" />
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Agendar turno</h5>
+                <EditForm Model="nuevo" OnValidSubmit="AgendarAsync">
+                    <DataAnnotationsValidator />
+                    <div class="mb-2">
+                        <label class="form-label">Cliente</label>
+                        <InputSelect class="form-select" @bind-Value="nuevo.ClienteId">
+                            <option value="0">Selecciona...</option>
+                            @foreach (var item in clientes)
+                            {
+                                <option value="@item.Id">@item.ObtenerNombreCompleto()</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => nuevo.ClienteId" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Servicio</label>
+                        <InputSelect class="form-select" @bind-Value="nuevo.ServicioId" @bind-Value:after="LimpiarHorarios">
+                            <option value="0">Selecciona...</option>
+                            @foreach (var item in servicios.Where(s => s.Activo))
+                            {
+                                <option value="@item.Id">@item.Resumen</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => nuevo.ServicioId" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Técnica</label>
+                        <InputSelect class="form-select" @bind-Value="nuevo.TecnicaId" @bind-Value:after="LimpiarHorarios">
+                            <option value="0">Selecciona...</option>
+                            @foreach (var item in tecnicas.Where(t => t.Activa))
+                            {
+                                <option value="@item.Id">@item.Resumen</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => nuevo.TecnicaId" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Atendido por</label>
+                        <InputSelect class="form-select" @bind-Value="nuevo.EmpleadoId">
+                            <option value="0">Selecciona...</option>
+                            @foreach (var item in empleados.Where(e => e.Activo))
+                            {
+                                <option value="@item.Id">@item.Resumen</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => nuevo.EmpleadoId" />
+                    </div>
+
+                    <div class="row g-2 align-items-end mb-2">
+                        <div class="col-5">
+                            <label class="form-label">Fecha</label>
+                            <InputDate class="form-control" @bind-Value="fechaBusqueda" @bind-Value:after="LimpiarHorarios" />
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Buscar en</label>
+                            <InputSelect class="form-select" @bind-Value="diasBusqueda" @bind-Value:after="LimpiarHorarios">
+                                <option value="1">Ese día</option>
+                                <option value="7">7 días</option>
+                            </InputSelect>
+                        </div>
+                        <div class="col-3">
+                            <button type="button" class="btn btn-outline-primary w-100" @onclick="BuscarHorariosAsync">Buscar</button>
+                        </div>
+                    </div>
+
+                    @if (horariosLibres != null)
+                    {
+                        @if (horariosLibres.Count == 0)
+                        {
+                            <p class="text-muted">No hay horarios libres para esa búsqueda.</p>
+                        }
+                        else
+                        {
+                            @foreach (var grupo in horariosLibres.GroupBy(h => h.Date))
+                            {
+                                <div class="small fw-semibold mt-2">@NombreDia(grupo.Key) @grupo.Key.ToString("dd/MM/yyyy")</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var hora in grupo)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm @(hora == nuevo.FechaHoraInicio ? "btn-success" : "btn-outline-success")"
+                                                @onclick="() => nuevo.FechaHoraInicio = hora">
+                                            @hora.ToString("HH:mm")
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+
+                    <div class="my-2">
+                        <label class="form-label">Observación (opcional)</label>
+                        <InputTextArea class="form-control" rows="2" @bind-Value="nuevo.Observacion" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" disabled="@(nuevo.FechaHoraInicio == default)">
+                        @(nuevo.FechaHoraInicio == default ? "Elige un horario" : $"Agendar {nuevo.FechaHoraInicio:dd/MM HH:mm}")
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+            <div>
+                <label class="form-label">Agenda del día</label>
+                <InputDate class="form-control" @bind-Value="fechaAgenda" @bind-Value:after="CargarAgendaAsync" />
+            </div>
+            <div>
+                <label class="form-label">Técnica</label>
+                <InputSelect class="form-select" @bind-Value="tecnicaAgenda" @bind-Value:after="CargarAgendaAsync">
+                    <option value="0">Todas</option>
+                    @foreach (var item in tecnicas)
+                    {
+                        <option value="@item.Id">@item.ObtenerNombreCompleto()</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+
+        @if (agenda == null)
+        {
+            <p><em>Cargando...</em></p>
+        }
+        else if (agenda.Count == 0)
+        {
+            <p>No hay turnos para ese día.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Cliente</th>
+                        <th>Servicio</th>
+                        <th>Técnica</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in agenda)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@item.FechaHoraInicio.ToString("HH:mm") - @item.FechaHoraFin.ToString("HH:mm")</td>
+                            <td>
+                                @Nombre(clientes, item.ClienteId)
+                                @if (!string.IsNullOrWhiteSpace(item.Observacion))
+                                {
+                                    <div class="small text-muted">@item.Observacion</div>
+                                }
+                            </td>
+                            <td>
+                                @(servicios.FirstOrDefault(s => s.Id == item.ServicioId)?.Nombre)
+                                <div class="small text-muted">@item.Precio.ToString("N2")</div>
+                            </td>
+                            <td>@Nombre(tecnicas, item.TecnicaId)</td>
+                            <td><EstadoBadge Estado="item.Estado" /></td>
+                            <td class="text-end">
+                                <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                    @if (item.Estado == EstadoTurno.Pendiente)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => CambiarEstadoAsync(item.Id, EstadoTurno.Confirmado)">Confirmar</button>
+                                    }
+                                    @if (item.Estado == EstadoTurno.Pendiente || item.Estado == EstadoTurno.Confirmado)
+                                    {
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => CambiarEstadoAsync(item.Id, EstadoTurno.Completado)">Completar</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => CambiarEstadoAsync(item.Id, EstadoTurno.Cancelado)">Cancelar</button>
+                                    }
+                                    <BotonEliminar OnConfirmar="() => EliminarAsync(item.Id)" />
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private const string Ruta = "api/Turno";
+
+    private List<ClienteDto> clientes = new();
+    private List<EmpleadoDto> empleados = new();
+    private List<TecnicaDto> tecnicas = new();
+    private List<ServicioDto> servicios = new();
+    private List<TurnoDto>? agenda;
+    private List<DateTime>? horariosLibres;
+
+    private TurnoDto nuevo = new();
+    private DateOnly fechaBusqueda = DateOnly.FromDateTime(DateTime.Today);
+    private int diasBusqueda = 1;
+    private DateOnly fechaAgenda = DateOnly.FromDateTime(DateTime.Today);
+    private int tecnicaAgenda;
+
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = await Api.GetListAsync<ClienteDto>("api/Cliente");
+        empleados = await Api.GetListAsync<EmpleadoDto>("api/Empleado");
+        tecnicas = await Api.GetListAsync<TecnicaDto>("api/Tecnica");
+        servicios = await Api.GetListAsync<ServicioDto>("api/Servicio");
+        await CargarAgendaAsync();
+    }
+
+    private async Task CargarAgendaAsync()
+    {
+        var ruta = $"{Ruta}/fecha/{Formato(fechaAgenda)}";
+        if (tecnicaAgenda != 0)
+        {
+            ruta += $"?tecnicaId={tecnicaAgenda}";
+        }
+
+        var result = await Api.GetAsync<List<TurnoDto>>(ruta);
+        agenda = result.Data ?? new List<TurnoDto>();
+        error = result.Success ? null : result.Message;
+    }
+
+    private async Task BuscarHorariosAsync()
+    {
+        LimpiarHorarios();
+
+        if (nuevo.TecnicaId == 0 || nuevo.ServicioId == 0)
+        {
+            error = "Selecciona el servicio y la técnica antes de buscar horarios";
+            return;
+        }
+
+        var ruta = diasBusqueda == 1
+            ? $"{Ruta}/disponibilidad?tecnicaId={nuevo.TecnicaId}&servicioId={nuevo.ServicioId}&fecha={Formato(fechaBusqueda)}"
+            : $"{Ruta}/disponibilidad/rango?tecnicaId={nuevo.TecnicaId}&servicioId={nuevo.ServicioId}&desde={Formato(fechaBusqueda)}&hasta={Formato(fechaBusqueda.AddDays(diasBusqueda - 1))}";
+
+        var result = await Api.GetAsync<List<DateTime>>(ruta);
+        horariosLibres = result.Data;
+        error = result.Success ? null : result.Message;
+    }
+
+    private async Task AgendarAsync()
+    {
+        var result = await Api.GuardarAsync(Ruta, nuevo);
+        error = result.Success ? null : result.Message;
+
+        if (result.Success)
+        {
+            exito = $"Turno agendado para el {nuevo.FechaHoraInicio:dd/MM/yyyy HH:mm}";
+            fechaAgenda = DateOnly.FromDateTime(nuevo.FechaHoraInicio);
+            nuevo = new TurnoDto();
+            LimpiarHorarios();
+            await CargarAgendaAsync();
+        }
+    }
+
+    private async Task CambiarEstadoAsync(int id, EstadoTurno estado)
+    {
+        await TerminarAsync(await Api.PutAsync($"{Ruta}/{id}/estado", estado), $"Turno marcado como {estado}");
+    }
+
+    private async Task EliminarAsync(int id)
+    {
+        await TerminarAsync(await Api.DeleteAsync(Ruta, id), "Turno eliminado");
+    }
+
+    private async Task TerminarAsync(ApiResult<bool> result, string mensaje)
+    {
+        error = result.Success ? null : result.Message;
+        exito = result.Success ? mensaje : null;
+
+        if (result.Success)
+        {
+            await CargarAgendaAsync();
+        }
+    }
+
+    private void LimpiarHorarios()
+    {
+        horariosLibres = null;
+        nuevo.FechaHoraInicio = default;
+    }
+
+    private static string Nombre(IEnumerable<PersonaDto> personas, int id)
+    {
+        return personas.FirstOrDefault(p => p.Id == id)?.ObtenerNombreCompleto() ?? $"#{id}";
+    }
+
+    private static string NombreDia(DateTime fecha)
+    {
+        return ((DiaSemana)fecha.DayOfWeek).ToString();
+    }
+
+    private static string Formato(DateOnly fecha)
+    {
+        return fecha.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
+}

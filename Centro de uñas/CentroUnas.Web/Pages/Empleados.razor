@@ -1,0 +1,141 @@
+@page "/empleados"
+@inject ApiService Api
+
+<PageTitle>Empleados</PageTitle>
+
+<h1 class="mb-3">Empleados</h1>
+
+<Alerta @bind-Mensaje="error" />
+<Alerta @bind-Mensaje="exito" Tipo="success" />
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">@(empleado.Id == 0 ? "Nuevo empleado" : "Editar empleado")</h5>
+                <EditForm Model="empleado" OnValidSubmit="GuardarAsync">
+                    <DataAnnotationsValidator />
+                    <CamposPersona Persona="empleado" />
+                    <div class="mb-2">
+                        <label class="form-label">Cargo</label>
+                        <InputText class="form-control" @bind-Value="empleado.Cargo" />
+                        <ValidationMessage For="() => empleado.Cargo" />
+                    </div>
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" id="activo" @bind-Value="empleado.Activo" />
+                        <label class="form-check-label" for="activo">Activo</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    @if (empleado.Id != 0)
+                    {
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="Limpiar">Cancelar</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (empleados == null)
+        {
+            <p><em>Cargando...</em></p>
+        }
+        else if (empleados.Count == 0)
+        {
+            <p>No hay empleados registrados.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cargo</th>
+                        <th>Teléfono</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in empleados)
+                    {
+                        <tr>
+                            <td>@item.ObtenerNombreCompleto()</td>
+                            <td>@item.Cargo</td>
+                            <td>@item.Telefono</td>
+                            <td>
+                                <span class="badge @(item.Activo ? "text-bg-success" : "text-bg-secondary")">@(item.Activo ? "Activo" : "Inactivo")</span>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditarAsync(item.Id)">Editar</button>
+                                <BotonEliminar OnConfirmar="() => EliminarAsync(item.Id)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private const string Ruta = "api/Empleado";
+
+    private List<EmpleadoDto>? empleados;
+    private EmpleadoDto empleado = new();
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        var result = await Api.GetAsync<List<EmpleadoDto>>(Ruta);
+        empleados = result.Data ?? new List<EmpleadoDto>();
+        error = result.Success ? null : result.Message;
+    }
+
+    private async Task EditarAsync(int id)
+    {
+        var result = await Api.GetAsync<EmpleadoDto>(Ruta, id);
+        if (result.Success && result.Data != null)
+        {
+            empleado = result.Data;
+        }
+        else
+        {
+            error = result.Message;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        var mensaje = empleado.Id == 0 ? "Empleado registrado" : "Empleado actualizado";
+        await TerminarAsync(await Api.GuardarAsync(Ruta, empleado), mensaje);
+    }
+
+    private async Task EliminarAsync(int id)
+    {
+        await TerminarAsync(await Api.DeleteAsync(Ruta, id), "Empleado eliminado");
+    }
+
+    private async Task TerminarAsync(ApiResult<bool> result, string mensaje)
+    {
+        error = result.Success ? null : result.Message;
+        exito = result.Success ? mensaje : null;
+
+        if (result.Success)
+        {
+            Limpiar();
+            await CargarAsync();
+        }
+    }
+
+    private void Limpiar()
+    {
+        empleado = new EmpleadoDto();
+    }
+}

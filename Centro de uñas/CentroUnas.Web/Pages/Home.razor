@@ -1,0 +1,93 @@
+﻿@page "/"
+@using System.Globalization
+@inject ApiService Api
+
+<PageTitle>Inicio</PageTitle>
+
+<h1 class="mb-1">Centro de Uñas</h1>
+<p class="text-muted mb-4">Turnos de hoy, @DateTime.Today.ToString("dd/MM/yyyy")</p>
+
+<Alerta @bind-Mensaje="error" />
+
+<div class="row g-3 mb-4">
+    @foreach (var tarjeta in tarjetas)
+    {
+        <div class="col-6 col-md-3">
+            <a class="card text-decoration-none h-100" href="@tarjeta.Ruta">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold">@tarjeta.Cantidad</div>
+                    <div class="text-muted">@tarjeta.Titulo</div>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h4 class="mb-0">Agenda de hoy</h4>
+    <a class="btn btn-primary" href="turnos">Agendar turno</a>
+</div>
+
+@if (hoy == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (hoy.Count == 0)
+{
+    <p>No hay turnos para hoy.</p>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Servicio</th>
+                <th>Técnica</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in hoy)
+            {
+                <tr>
+                    <td>@item.FechaHoraInicio.ToString("HH:mm")</td>
+                    <td>@(clientes.FirstOrDefault(c => c.Id == item.ClienteId)?.ObtenerNombreCompleto())</td>
+                    <td>@(servicios.FirstOrDefault(s => s.Id == item.ServicioId)?.Nombre)</td>
+                    <td>@(tecnicas.FirstOrDefault(t => t.Id == item.TecnicaId)?.ObtenerNombreCompleto())</td>
+                    <td><EstadoBadge Estado="item.Estado" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ClienteDto> clientes = new();
+    private List<TecnicaDto> tecnicas = new();
+    private List<ServicioDto> servicios = new();
+    private List<TurnoDto>? hoy;
+    private List<(string Titulo, int Cantidad, string Ruta)> tarjetas = new();
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var fecha = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var result = await Api.GetAsync<List<TurnoDto>>($"api/Turno/fecha/{fecha}");
+        error = result.Success ? null : result.Message;
+
+        clientes = await Api.GetListAsync<ClienteDto>("api/Cliente");
+        tecnicas = await Api.GetListAsync<TecnicaDto>("api/Tecnica");
+        servicios = await Api.GetListAsync<ServicioDto>("api/Servicio");
+        hoy = result.Data ?? new List<TurnoDto>();
+
+        tarjetas = new()
+        {
+            ("Turnos hoy", hoy.Count(t => t.Estado != EstadoTurno.Cancelado), "turnos"),
+            ("Clientes", clientes.Count, "clientes"),
+            ("Técnicas activas", tecnicas.Count(t => t.Activa), "tecnicas"),
+            ("Servicios activos", servicios.Count(s => s.Activo), "servicios")
+        };
+    }
+}

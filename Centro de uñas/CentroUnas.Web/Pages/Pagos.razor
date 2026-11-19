@@ -1,0 +1,192 @@
+@page "/pagos"
+@inject ApiService Api
+
+<PageTitle>Pagos</PageTitle>
+
+<h1 class="mb-3">Pagos</h1>
+
+<Alerta @bind-Mensaje="error" />
+<Alerta @bind-Mensaje="exito" Tipo="success" />
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">@(pago.Id == 0 ? "Registrar pago" : "Editar pago")</h5>
+                <EditForm Model="pago" OnValidSubmit="GuardarAsync">
+                    <DataAnnotationsValidator />
+                    <div class="mb-2">
+                        <label class="form-label">Turno</label>
+                        <InputSelect class="form-select" @bind-Value="pago.TurnoId">
+                            <option value="0">Selecciona...</option>
+                            @foreach (var item in turnos.Where(t => t.Estado != EstadoTurno.Cancelado || t.Id == pago.TurnoId).OrderByDescending(t => t.FechaHoraInicio))
+                            {
+                                <option value="@item.Id">@DescribirTurno(item)</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => pago.TurnoId" />
+                        @if (pago.TurnoId != 0)
+                        {
+                            <div class="form-text">Saldo pendiente: @Saldo(pago.TurnoId).ToString("N2")</div>
+                        }
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <label class="form-label">Monto</label>
+                            <InputNumber class="form-control" @bind-Value="pago.Monto" />
+                            <ValidationMessage For="() => pago.Monto" />
+                        </div>
+                        <div class="col-6 mb-2">
+                            <label class="form-label">Método</label>
+                            <InputSelect class="form-select" @bind-Value="pago.MetodoPago">
+                                @foreach (var metodo in Enum.GetValues<MetodoPago>())
+                                {
+                                    <option value="@metodo">@metodo</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Referencia (opcional)</label>
+                        <InputText class="form-control" @bind-Value="pago.Referencia" />
+                        <ValidationMessage For="() => pago.Referencia" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    @if (pago.Id != 0)
+                    {
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="Limpiar">Cancelar</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (pagos == null)
+        {
+            <p><em>Cargando...</em></p>
+        }
+        else if (pagos.Count == 0)
+        {
+            <p>No hay pagos registrados.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Turno</th>
+                        <th class="text-end">Monto</th>
+                        <th>Método</th>
+                        <th>Referencia</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in pagos.OrderByDescending(p => p.FechaPago))
+                    {
+                        <tr>
+                            <td class="text-nowrap">@item.FechaPago.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@DescribirTurno(item.TurnoId)</td>
+                            <td class="text-end">@item.Monto.ToString("N2")</td>
+                            <td>@item.MetodoPago</td>
+                            <td>@item.Referencia</td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditarAsync(item.Id)">Editar</button>
+                                <BotonEliminar OnConfirmar="() => EliminarAsync(item.Id)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private const string Ruta = "api/Pago";
+
+    private List<PagoDto>? pagos;
+    private List<TurnoDto> turnos = new();
+    private List<ClienteDto> clientes = new();
+    private PagoDto pago = new();
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = await Api.GetListAsync<ClienteDto>("api/Cliente");
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        turnos = await Api.GetListAsync<TurnoDto>("api/Turno");
+        var result = await Api.GetAsync<List<PagoDto>>(Ruta);
+        pagos = result.Data ?? new List<PagoDto>();
+        error = result.Success ? null : result.Message;
+    }
+
+    private string DescribirTurno(int turnoId)
+    {
+        var turno = turnos.FirstOrDefault(t => t.Id == turnoId);
+        return turno == null ? $"#{turnoId}" : DescribirTurno(turno);
+    }
+
+    private string DescribirTurno(TurnoDto turno)
+    {
+        var cliente = clientes.FirstOrDefault(c => c.Id == turno.ClienteId)?.ObtenerNombreCompleto() ?? $"Cliente #{turno.ClienteId}";
+        return $"{cliente} - {turno.FechaHoraInicio:dd/MM/yyyy HH:mm} - {turno.Precio:N2}";
+    }
+
+    private decimal Saldo(int turnoId)
+    {
+        var precio = turnos.FirstOrDefault(t => t.Id == turnoId)?.Precio ?? 0;
+        var pagado = (pagos ?? new List<PagoDto>())
+            .Where(p => p.TurnoId == turnoId && p.Id != pago.Id)
+            .Sum(p => p.Monto);
+        return precio - pagado;
+    }
+
+    private async Task EditarAsync(int id)
+    {
+        var result = await Api.GetAsync<PagoDto>(Ruta, id);
+        if (result.Success && result.Data != null)
+        {
+            pago = result.Data;
+        }
+        else
+        {
+            error = result.Message;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        var mensaje = pago.Id == 0 ? "Pago registrado" : "Pago actualizado";
+        await TerminarAsync(await Api.GuardarAsync(Ruta, pago), mensaje);
+    }
+
+    private async Task EliminarAsync(int id)
+    {
+        await TerminarAsync(await Api.DeleteAsync(Ruta, id), "Pago eliminado");
+    }
+
+    private async Task TerminarAsync(ApiResult<bool> result, string mensaje)
+    {
+        error = result.Success ? null : result.Message;
+        exito = result.Success ? mensaje : null;
+
+        if (result.Success)
+        {
+            Limpiar();
+            await CargarAsync();
+        }
+    }
+
+    private void Limpiar()
+    {
+        pago = new PagoDto();
+    }
+}

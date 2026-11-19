@@ -1,0 +1,128 @@
+@page "/clientes"
+@inject ApiService Api
+
+<PageTitle>Clientes</PageTitle>
+
+<h1 class="mb-3">Clientes</h1>
+
+<Alerta @bind-Mensaje="error" />
+<Alerta @bind-Mensaje="exito" Tipo="success" />
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">@(cliente.Id == 0 ? "Nuevo cliente" : "Editar cliente")</h5>
+                <EditForm Model="cliente" OnValidSubmit="GuardarAsync">
+                    <DataAnnotationsValidator />
+                    <CamposPersona Persona="cliente" />
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    @if (cliente.Id != 0)
+                    {
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="Limpiar">Cancelar</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (clientes == null)
+        {
+            <p><em>Cargando...</em></p>
+        }
+        else if (clientes.Count == 0)
+        {
+            <p>No hay clientes registrados.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Correo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in clientes)
+                    {
+                        <tr>
+                            <td>@item.ObtenerNombreCompleto()</td>
+                            <td>@item.Telefono</td>
+                            <td>@item.Email</td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditarAsync(item.Id)">Editar</button>
+                                <BotonEliminar OnConfirmar="() => EliminarAsync(item.Id)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private const string Ruta = "api/Cliente";
+
+    private List<ClienteDto>? clientes;
+    private ClienteDto cliente = new();
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        var result = await Api.GetAsync<List<ClienteDto>>(Ruta);
+        clientes = result.Data ?? new List<ClienteDto>();
+        error = result.Success ? null : result.Message;
+    }
+
+    private async Task EditarAsync(int id)
+    {
+        var result = await Api.GetAsync<ClienteDto>(Ruta, id);
+        if (result.Success && result.Data != null)
+        {
+            cliente = result.Data;
+        }
+        else
+        {
+            error = result.Message;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        var mensaje = cliente.Id == 0 ? "Cliente registrado" : "Cliente actualizado";
+        await TerminarAsync(await Api.GuardarAsync(Ruta, cliente), mensaje);
+    }
+
+    private async Task EliminarAsync(int id)
+    {
+        await TerminarAsync(await Api.DeleteAsync(Ruta, id), "Cliente eliminado");
+    }
+
+    private async Task TerminarAsync(ApiResult<bool> result, string mensaje)
+    {
+        error = result.Success ? null : result.Message;
+        exito = result.Success ? mensaje : null;
+
+        if (result.Success)
+        {
+            Limpiar();
+            await CargarAsync();
+        }
+    }
+
+    private void Limpiar()
+    {
+        cliente = new ClienteDto();
+    }
+}
