@@ -16,13 +16,7 @@ namespace CentroUnas.Infrastructure.Repositories
         {
             await ValidarEmailAsync(datos.Email, 0);
 
-            var cliente = new Cliente
-            {
-                Nombre = datos.Nombre,
-                Apellido = datos.Apellido,
-                Email = datos.Email,
-                Telefono = datos.Telefono
-            };
+            var cliente = new Cliente(datos.Nombre, datos.Apellido, datos.Telefono, datos.Email);
 
             return await Create(cliente);
         }

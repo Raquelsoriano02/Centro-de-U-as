@@ -73,6 +73,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = servicio.Id,
                 FechaRegistro = servicio.FechaRegistro,
+                Resumen = servicio.ObtenerDescripcion(),
                 Nombre = servicio.Nombre,
                 Descripcion = servicio.Descripcion,
                 Precio = servicio.Precio,
@@ -83,12 +84,8 @@ namespace CentroUnas.Application.Service
 
         private static Servicio ToEntity(CreateServicioDto dto)
         {
-            return new Servicio
+            return new Servicio(dto.Nombre, dto.Precio, dto.DuracionMinutos, dto.Descripcion)
             {
-                Nombre = dto.Nombre,
-                Descripcion = dto.Descripcion,
-                Precio = dto.Precio,
-                DuracionMinutos = dto.DuracionMinutos,
                 Activo = dto.Activo
             };
         }

@@ -16,14 +16,7 @@ namespace CentroUnas.Infrastructure.Repositories
         {
             await ValidarHorarioAsync(datos, 0);
 
-            var horario = new Horario
-            {
-                TecnicaId = datos.TecnicaId,
-                DiaSemana = datos.DiaSemana,
-                HoraInicio = datos.HoraInicio,
-                HoraFin = datos.HoraFin,
-                Disponible = datos.Disponible
-            };
+            var horario = new Horario(datos.TecnicaId, datos.DiaSemana, datos.HoraInicio, datos.HoraFin, datos.Disponible);
 
             return await Create(horario);
         }

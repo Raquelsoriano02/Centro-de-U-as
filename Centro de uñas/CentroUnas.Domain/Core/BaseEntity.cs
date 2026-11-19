@@ -4,5 +4,7 @@ namespace CentroUnas.Domain.Core
     {
         public int Id { get; set; }
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
+
+        public abstract string ObtenerDescripcion();
     }
 }

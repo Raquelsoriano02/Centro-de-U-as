@@ -17,13 +17,9 @@ namespace CentroUnas.Infrastructure.Repositories
         {
             await ValidarPagoAsync(datos, 0);
 
-            var pago = new Pago
+            var pago = new Pago(datos.TurnoId, datos.Monto, datos.MetodoPago, datos.Referencia)
             {
-                TurnoId = datos.TurnoId,
-                Monto = datos.Monto,
-                MetodoPago = datos.MetodoPago,
-                FechaPago = DateTime.Now,
-                Referencia = datos.Referencia
+                FechaPago = DateTime.Now
             };
 
             return await Create(pago);

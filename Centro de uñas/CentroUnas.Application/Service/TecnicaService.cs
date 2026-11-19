@@ -87,6 +87,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = tecnica.Id,
                 FechaRegistro = tecnica.FechaRegistro,
+                Resumen = tecnica.ObtenerDescripcion(),
                 Nombre = tecnica.Nombre,
                 Apellido = tecnica.Apellido,
                 Email = tecnica.Email,
@@ -98,13 +99,8 @@ namespace CentroUnas.Application.Service
 
         private static Tecnica ToEntity(CreateTecnicaDto dto)
         {
-            return new Tecnica
+            return new Tecnica(dto.Nombre, dto.Apellido, dto.Telefono, dto.Email, dto.Especialidad)
             {
-                Nombre = dto.Nombre,
-                Apellido = dto.Apellido,
-                Email = dto.Email,
-                Telefono = dto.Telefono,
-                Especialidad = dto.Especialidad,
                 Activa = dto.Activa
             };
         }

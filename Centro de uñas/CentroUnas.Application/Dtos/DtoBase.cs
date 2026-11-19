@@ -4,5 +4,6 @@ namespace CentroUnas.Application.Dtos
     {
         public int Id { get; set; }
         public DateTime FechaRegistro { get; set; }
+        public string Resumen { get; set; } = string.Empty;
     }
 }

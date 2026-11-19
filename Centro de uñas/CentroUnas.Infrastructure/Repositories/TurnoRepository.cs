@@ -13,9 +13,22 @@ namespace CentroUnas.Infrastructure.Repositories
     {
         private const int IntervaloMinutos = 30;
         private const int ErrorDeadlock = 1205;
+        private const int MaximoDiasConsulta = 31;
 
         public TurnoRepository(CentroUnasContext context) : base(context)
         {
+        }
+
+        public async Task<List<Turno>> GetTurnosAsync(DateOnly fecha)
+        {
+            return await TurnosDelDia(fecha).ToListAsync();
+        }
+
+        public async Task<List<Turno>> GetTurnosAsync(DateOnly fecha, int tecnicaId)
+        {
+            return await TurnosDelDia(fecha)
+                .Where(t => t.TecnicaId == tecnicaId)
+                .ToListAsync();
         }
 
         public async Task<List<DateTime>> GetDisponibilidadAsync(int tecnicaId, int servicioId, DateOnly fecha)
@@ -23,6 +36,46 @@ namespace CentroUnas.Infrastructure.Repositories
             await ValidarTecnicaActivaAsync(tecnicaId);
             var servicio = await ObtenerServicioActivoAsync(servicioId);
 
+            return await CalcularDisponibilidadAsync(tecnicaId, servicio, fecha);
+        }
+
+        public async Task<List<DateTime>> GetDisponibilidadAsync(int tecnicaId, int servicioId, DateOnly desde, DateOnly hasta)
+        {
+            if (hasta < desde)
+            {
+                throw new TurnoException("La fecha final no puede ser anterior a la fecha inicial");
+            }
+
+            if (hasta.DayNumber - desde.DayNumber >= MaximoDiasConsulta)
+            {
+                throw new TurnoException($"El rango no puede ser mayor a {MaximoDiasConsulta} días");
+            }
+
+            await ValidarTecnicaActivaAsync(tecnicaId);
+            var servicio = await ObtenerServicioActivoAsync(servicioId);
+
+            var disponibles = new List<DateTime>();
+
+            for (var fecha = desde; fecha <= hasta; fecha = fecha.AddDays(1))
+            {
+                disponibles.AddRange(await CalcularDisponibilidadAsync(tecnicaId, servicio, fecha));
+            }
+
+            return disponibles;
+        }
+
+        private IQueryable<Turno> TurnosDelDia(DateOnly fecha)
+        {
+            var inicioDia = fecha.ToDateTime(TimeOnly.MinValue);
+            var finDia = inicioDia.AddDays(1);
+
+            return _context.Turnos
+                .Where(t => t.FechaHoraInicio >= inicioDia && t.FechaHoraInicio < finDia)
+                .OrderBy(t => t.FechaHoraInicio);
+        }
+
+        private async Task<List<DateTime>> CalcularDisponibilidadAsync(int tecnicaId, Servicio servicio, DateOnly fecha)
+        {
             var dia = (DiaSemana)fecha.DayOfWeek;
             var inicioDia = fecha.ToDateTime(TimeOnly.MinValue);
             var finDia = inicioDia.AddDays(1);

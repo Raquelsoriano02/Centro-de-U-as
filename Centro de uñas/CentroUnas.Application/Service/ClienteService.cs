@@ -87,6 +87,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = cliente.Id,
                 FechaRegistro = cliente.FechaRegistro,
+                Resumen = cliente.ObtenerDescripcion(),
                 Nombre = cliente.Nombre,
                 Apellido = cliente.Apellido,
                 Email = cliente.Email,
@@ -96,13 +97,7 @@ namespace CentroUnas.Application.Service
 
         private static Cliente ToEntity(CreateClienteDto dto)
         {
-            return new Cliente
-            {
-                Nombre = dto.Nombre,
-                Apellido = dto.Apellido,
-                Email = dto.Email,
-                Telefono = dto.Telefono
-            };
+            return new Cliente(dto.Nombre, dto.Apellido, dto.Telefono, dto.Email);
         }
     }
 }

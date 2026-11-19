@@ -14,12 +14,8 @@ namespace CentroUnas.Infrastructure.Repositories
 
         public async Task<Servicio> CreateServicioAsync(Servicio datos)
         {
-            var servicio = new Servicio
+            var servicio = new Servicio(datos.Nombre, datos.Precio, datos.DuracionMinutos, datos.Descripcion)
             {
-                Nombre = datos.Nombre,
-                Descripcion = datos.Descripcion,
-                Precio = datos.Precio,
-                DuracionMinutos = datos.DuracionMinutos,
                 Activo = datos.Activo
             };
 

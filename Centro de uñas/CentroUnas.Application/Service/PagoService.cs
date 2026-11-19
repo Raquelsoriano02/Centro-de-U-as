@@ -80,6 +80,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = pago.Id,
                 FechaRegistro = pago.FechaRegistro,
+                Resumen = pago.ObtenerDescripcion(),
                 TurnoId = pago.TurnoId,
                 Monto = pago.Monto,
                 MetodoPago = pago.MetodoPago,
@@ -90,13 +91,7 @@ namespace CentroUnas.Application.Service
 
         private static Pago ToEntity(CreatePagoDto dto)
         {
-            return new Pago
-            {
-                TurnoId = dto.TurnoId,
-                Monto = dto.Monto,
-                MetodoPago = dto.MetodoPago,
-                Referencia = dto.Referencia
-            };
+            return new Pago(dto.TurnoId, dto.Monto, dto.MetodoPago, dto.Referencia);
         }
     }
 }

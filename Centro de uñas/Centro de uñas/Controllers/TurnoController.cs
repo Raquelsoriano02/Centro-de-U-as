@@ -35,6 +35,28 @@ namespace Centro_de_uñas.Controllers
             return Ok(result.Data);
         }
 
+        [HttpGet("fecha/{fecha}")]
+        public async Task<IActionResult> GetTurnosPorFecha(DateOnly fecha, [FromQuery] int? tecnicaId)
+        {
+            var result = tecnicaId.HasValue
+                ? await _service.GetTurnosAsync(fecha, tecnicaId.Value)
+                : await _service.GetTurnosAsync(fecha);
+
+            return Ok(result.Data);
+        }
+
+        [HttpGet("disponibilidad/rango")]
+        public async Task<IActionResult> GetDisponibilidadRango([FromQuery] int tecnicaId, [FromQuery] int servicioId, [FromQuery] DateOnly desde, [FromQuery] DateOnly hasta)
+        {
+            var result = await _service.GetDisponibilidadAsync(tecnicaId, servicioId, desde, hasta);
+            if (!result.Success)
+            {
+                return BadRequest(result.Message);
+            }
+
+            return Ok(result.Data);
+        }
+
         [HttpGet("disponibilidad")]
         public async Task<IActionResult> GetDisponibilidad([FromQuery] int tecnicaId, [FromQuery] int servicioId, [FromQuery] DateOnly fecha)
         {

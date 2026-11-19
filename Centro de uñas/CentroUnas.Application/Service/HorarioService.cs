@@ -80,6 +80,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = horario.Id,
                 FechaRegistro = horario.FechaRegistro,
+                Resumen = horario.ObtenerDescripcion(),
                 TecnicaId = horario.TecnicaId,
                 DiaSemana = horario.DiaSemana,
                 HoraInicio = horario.HoraInicio,
@@ -90,14 +91,7 @@ namespace CentroUnas.Application.Service
 
         private static Horario ToEntity(CreateHorarioDto dto)
         {
-            return new Horario
-            {
-                TecnicaId = dto.TecnicaId,
-                DiaSemana = dto.DiaSemana,
-                HoraInicio = dto.HoraInicio,
-                HoraFin = dto.HoraFin,
-                Disponible = dto.Disponible
-            };
+            return new Horario(dto.TecnicaId, dto.DiaSemana, dto.HoraInicio, dto.HoraFin, dto.Disponible);
         }
     }
 }

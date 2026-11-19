@@ -33,6 +33,31 @@ namespace CentroUnas.Application.Service
             return ServiceResult<TurnoDto>.Ok(ToDto(turno));
         }
 
+        public async Task<ServiceResult<List<TurnoDto>>> GetTurnosAsync(DateOnly fecha)
+        {
+            var turnos = await _repository.GetTurnosAsync(fecha);
+            return ServiceResult<List<TurnoDto>>.Ok(turnos.Select(ToDto).ToList());
+        }
+
+        public async Task<ServiceResult<List<TurnoDto>>> GetTurnosAsync(DateOnly fecha, int tecnicaId)
+        {
+            var turnos = await _repository.GetTurnosAsync(fecha, tecnicaId);
+            return ServiceResult<List<TurnoDto>>.Ok(turnos.Select(ToDto).ToList());
+        }
+
+        public async Task<ServiceResult<List<DateTime>>> GetDisponibilidadAsync(int tecnicaId, int servicioId, DateOnly desde, DateOnly hasta)
+        {
+            try
+            {
+                var disponibles = await _repository.GetDisponibilidadAsync(tecnicaId, servicioId, desde, hasta);
+                return ServiceResult<List<DateTime>>.Ok(disponibles);
+            }
+            catch (TurnoException ex)
+            {
+                return ServiceResult<List<DateTime>>.Fail(ex.Message);
+            }
+        }
+
         public async Task<ServiceResult<List<DateTime>>> GetDisponibilidadAsync(int tecnicaId, int servicioId, DateOnly fecha)
         {
             try
@@ -119,6 +144,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = turno.Id,
                 FechaRegistro = turno.FechaRegistro,
+                Resumen = turno.ObtenerDescripcion(),
                 ClienteId = turno.ClienteId,
                 EmpleadoId = turno.EmpleadoId,
                 TecnicaId = turno.TecnicaId,
@@ -133,15 +159,7 @@ namespace CentroUnas.Application.Service
 
         private static Turno ToEntity(CreateTurnoDto dto)
         {
-            return new Turno
-            {
-                ClienteId = dto.ClienteId,
-                EmpleadoId = dto.EmpleadoId,
-                TecnicaId = dto.TecnicaId,
-                ServicioId = dto.ServicioId,
-                FechaHoraInicio = dto.FechaHoraInicio,
-                Observacion = dto.Observacion
-            };
+            return new Turno(dto.ClienteId, dto.EmpleadoId, dto.TecnicaId, dto.ServicioId, dto.FechaHoraInicio, dto.Observacion);
         }
     }
 }

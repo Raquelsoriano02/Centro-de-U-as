@@ -4,6 +4,23 @@ namespace CentroUnas.Domain.Core
 {
     public abstract class Person : BaseEntity
     {
+        protected Person()
+        {
+        }
+
+        protected Person(string nombre, string apellido, string telefono)
+        {
+            Nombre = nombre;
+            Apellido = apellido;
+            Telefono = telefono;
+        }
+
+        protected Person(string nombre, string apellido, string telefono, string? email)
+            : this(nombre, apellido, telefono)
+        {
+            Email = email;
+        }
+
         [Required]
         [MaxLength(100)]
         public string Nombre { get; set; } = string.Empty;
@@ -19,5 +36,17 @@ namespace CentroUnas.Domain.Core
         [Required]
         [MaxLength(20)]
         public string Telefono { get; set; } = string.Empty;
+
+        public string ObtenerNombreCompleto()
+        {
+            return $"{Nombre} {Apellido}";
+        }
+
+        public abstract string ObtenerRol();
+
+        public override string ObtenerDescripcion()
+        {
+            return $"{ObtenerNombreCompleto()} - {ObtenerRol()}";
+        }
     }
 }

@@ -16,13 +16,8 @@ namespace CentroUnas.Infrastructure.Repositories
         {
             await ValidarEmailAsync(datos.Email, 0);
 
-            var tecnica = new Tecnica
+            var tecnica = new Tecnica(datos.Nombre, datos.Apellido, datos.Telefono, datos.Email, datos.Especialidad)
             {
-                Nombre = datos.Nombre,
-                Apellido = datos.Apellido,
-                Email = datos.Email,
-                Telefono = datos.Telefono,
-                Especialidad = datos.Especialidad,
                 Activa = datos.Activa
             };
 

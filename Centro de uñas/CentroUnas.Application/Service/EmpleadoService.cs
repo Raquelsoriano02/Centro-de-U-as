@@ -87,6 +87,7 @@ namespace CentroUnas.Application.Service
             {
                 Id = empleado.Id,
                 FechaRegistro = empleado.FechaRegistro,
+                Resumen = empleado.ObtenerDescripcion(),
                 Nombre = empleado.Nombre,
                 Apellido = empleado.Apellido,
                 Email = empleado.Email,
@@ -98,13 +99,8 @@ namespace CentroUnas.Application.Service
 
         private static Empleado ToEntity(CreateEmpleadoDto dto)
         {
-            return new Empleado
+            return new Empleado(dto.Nombre, dto.Apellido, dto.Telefono, dto.Email, dto.Cargo)
             {
-                Nombre = dto.Nombre,
-                Apellido = dto.Apellido,
-                Email = dto.Email,
-                Telefono = dto.Telefono,
-                Cargo = dto.Cargo,
                 Activo = dto.Activo
             };
         }
