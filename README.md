@@ -28,7 +28,7 @@ Este sistema resuelve eso:
 |---|---|
 | Backend | ASP.NET Core 9 Web API con Swagger |
 | Base de datos | SQL Server con Entity Framework Core 9 (migraciones) |
-| Frontend | Blazor WebAssembly (.NET 9) con Bootstrap |
+| Frontend | HTML, CSS y JavaScript puro (módulos ES), servido por un proyecto ASP.NET Core |
 | Lenguaje | C# |
 
 ## Arquitectura
@@ -38,7 +38,7 @@ La solución tiene cinco proyectos. El frontend y la API son aplicaciones separa
 ```mermaid
 flowchart LR
     subgraph Cliente["Navegador"]
-        Web["CentroUnas.Web<br/>Blazor WebAssembly"]
+        Web["CentroUnas.Frontend<br/>HTML, CSS y JavaScript"]
     end
     subgraph Servidor["API REST"]
         Api["Centro de uñas<br/>Controladores"]
@@ -58,7 +58,7 @@ flowchart LR
 
 | Capa | Proyecto | Responsabilidad |
 |---|---|---|
-| Presentación | `CentroUnas.Web` | Páginas que ve el usuario. Llama a la API con `ApiService`. |
+| Presentación | `CentroUnas.Frontend` | Página web en JavaScript puro. Llama a la API con `fetch` desde `js/api.js`. |
 | API | `Centro de uñas` | Controladores REST, CORS y Swagger. |
 | Aplicación | `CentroUnas.Application` | Servicios que convierten entidades en DTO y devuelven un `ServiceResult`. |
 | Infraestructura | `CentroUnas.Infrastructure` | `DbContext`, migraciones, repositorios y reglas de negocio. |
@@ -305,13 +305,13 @@ Los otros recursos (Cliente, Empleado, Técnica, Servicio, Horario y Pago) sigue
 | **Clases normales** | Las entidades `Cliente`, `Empleado`, `Tecnica`, `Servicio`, `Horario`, `Turno` y `Pago` (`CentroUnas.Domain/Entities`), además de repositorios, servicios y controladores. |
 | **Constructores** | Cada entidad tiene un constructor vacío (lo usa Entity Framework) y constructores con parámetros. Los servicios y repositorios crean los objetos con ellos, por ejemplo `new Cliente(nombre, apellido, telefono, email)`. |
 | **Encadenamiento de constructores** | Las clases hijas llaman al padre con `: base(...)` (`Cliente` → `Person`) y las versiones largas reutilizan la corta con `: this(...)`. |
-| **Clases abstractas** | `BaseEntity` y `Person` en el dominio, `DtoBase` en Application, y `DtoBase` y `PersonaDto` en el frontend. |
+| **Clases abstractas** | `BaseEntity` y `Person` en el dominio, y `DtoBase` en Application. |
 | **Métodos abstractos** | `BaseEntity.ObtenerDescripcion()` lo implementan todas las entidades. `Person.ObtenerRol()` lo implementan `Cliente`, `Empleado` y `Tecnica`. El resultado llega al usuario en el campo `Resumen`. |
-| **Sobrecarga de métodos** | `TurnoRepository` y `TurnoService`: `GetDisponibilidadAsync` (un día o un rango) y `GetTurnosAsync` (por fecha o por fecha y técnica). En el frontend, `ApiService.GetAsync` y `ApiService.PutAsync`. Los constructores también están sobrecargados. |
+| **Sobrecarga de métodos** | `TurnoRepository` y `TurnoService`: `GetDisponibilidadAsync` (un día o un rango) y `GetTurnosAsync` (por fecha o por fecha y técnica). El frontend las usa al buscar horas libres de un día o de 7 días y al filtrar la agenda de hoy por técnica. Los constructores también están sobrecargados. |
 | **Herencia** | `Cliente`, `Empleado` y `Tecnica` heredan de `Person`, que hereda de `BaseEntity`. Los repositorios heredan de `BaseRepository<T>`. |
 | **Polimorfismo** | `ObtenerDescripcion()` se llama igual en cualquier entidad y cada una responde con su propio texto. |
-| **Encapsulamiento** | `ServiceResult<T>` y `ApiResult<T>` tienen setters privados y solo se crean con `Ok`, `Fail` o `NotFoundResult`. Los repositorios exponen `_context` solo a sus clases hijas (`protected`). |
-| **Genéricos** | `BaseRepository<T>`, `ServiceResult<T>` y `ApiResult<T>`. |
+| **Encapsulamiento** | `ServiceResult<T>` tiene setters privados y solo se crean con `Ok`, `Fail` o `NotFoundResult`. Los repositorios exponen `_context` solo a sus clases hijas (`protected`). |
+| **Genéricos** | `BaseRepository<T>` y `ServiceResult<T>`. |
 
 ## Reglas de negocio
 
@@ -358,17 +358,17 @@ La documentación completa está en Swagger: `http://localhost:5228/swagger`.
    ```
 
 4. Iniciar la API y el frontend:
-   - **Visual Studio:** abrir `Centro de uñas.sln`, elegir el perfil de inicio **API + Web** y presionar F5.
+   - **Visual Studio:** abrir `Centro de uñas.sln`, elegir el perfil de inicio **API + Frontend** y presionar F5. Se abren Swagger y la página web.
    - **Terminal:** en dos terminales distintas, desde la carpeta `Centro de uñas`:
 
      ```
      dotnet run --project "Centro de uñas" --launch-profile http
-     dotnet run --project CentroUnas.Web --launch-profile http
+     dotnet run --project CentroUnas.Frontend --launch-profile http
      ```
 
-5. Abrir el frontend en `http://localhost:5024`. La API queda en `http://localhost:5228`.
+5. Abrir el frontend en `http://localhost:5229`. La API queda en `http://localhost:5228`.
 
-El frontend busca la API en la dirección de `CentroUnas.Web/wwwroot/appsettings.json`, y la API solo acepta llamadas de las direcciones de `Cors:Origenes` en su `appsettings.json`. Si se cambia algún puerto, hay que actualizar los dos archivos.
+El frontend busca la API en la dirección de `CentroUnas.Frontend/wwwroot/js/config.js`, y la API solo acepta llamadas de las direcciones de `Cors:Origenes` en su `appsettings.json`. Si se cambia algún puerto, hay que actualizar los dos archivos.
 
 ## Estructura del repositorio
 
@@ -378,10 +378,19 @@ Centro de uñas/
 ├── CentroUnas.Application/      Servicios, DTO y ServiceResult
 ├── CentroUnas.Domain/           Entidades, clases abstractas y enumeraciones
 ├── CentroUnas.Infrastructure/   DbContext, migraciones, repositorios y excepciones
-└── CentroUnas.Web/              Frontend en Blazor WebAssembly
-    ├── Core/                    ApiResult y enumeraciones
-    ├── Dtos/                    DTO con validaciones
-    ├── Pages/                   Inicio, Turnos, Pagos y CRUD de cada recurso
-    ├── Services/                ApiService (cliente HTTP)
-    └── Shared/                  Componentes reutilizables
+└── CentroUnas.Frontend/         Frontend en JavaScript puro
+    ├── Program.cs               Sirve los archivos de wwwroot
+    └── wwwroot/
+        ├── index.html           Página única con menú lateral
+        ├── css/styles.css       Estilos con tema claro y oscuro
+        └── js/
+            ├── config.js        Dirección de la API
+            ├── api.js           Llamadas HTTP a la API
+            ├── app.js           Menú, tema y rutas
+            ├── modules.js       Columnas, campos y acciones de cada pantalla
+            ├── crud.js          Tabla con búsqueda, filtros, orden y paginación
+            ├── form.js          Formularios y selector de horas libres
+            ├── dashboard.js     Página de inicio
+            ├── expediente.js    Historial de cada cliente
+            └── ui.js            Elementos, iconos, formatos, avisos y modales
 ```

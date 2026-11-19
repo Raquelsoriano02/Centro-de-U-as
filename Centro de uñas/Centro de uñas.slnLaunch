@@ -1,6 +1,6 @@
 [
   {
-    "Name": "API + Web",
+    "Name": "API + Frontend",
     "Projects": [
       {
         "Path": "Centro de uñas\\Centro de uñas.csproj",
@@ -8,7 +8,7 @@
         "DebugTarget": "http"
       },
       {
-        "Path": "CentroUnas.Web\\CentroUnas.Web.csproj",
+        "Path": "CentroUnas.Frontend\\CentroUnas.Frontend.csproj",
         "Action": "Start",
         "DebugTarget": "http"
       }
